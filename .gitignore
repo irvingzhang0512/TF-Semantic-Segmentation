@@ -18,3 +18,4 @@ tfrecords.py
 results/
 logs/
 .vscode/
+__pycache__/
