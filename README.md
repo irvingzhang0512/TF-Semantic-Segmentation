@@ -12,12 +12,12 @@
 ## 2. TODO
 
 ### 2.1. dataset:
-+ [ ] use tensorflow to implement all data argument tools instead of `cv2`.
-+ [ ] generate tfrecord utils.
-+ [ ] utils to get `tf.data.Dataset` by tfrecord files.
-+ [ ] ade20k
-+ [ ] cityscape
-+ [ ] voc
++ [x] use tensorflow to implement all data argument tools instead of `cv2`.
++ [x] generate tfrecord utils.
++ [x] utils to get `tf.data.Dataset` by tfrecord files.
++ [x] ade20k
++ [x] cityscape
++ [x] voc
 + [ ] camvid
 
 
