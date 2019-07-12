@@ -53,8 +53,8 @@ def get_mean_pixel(model_variant=None):
 
 def preprocess_image_and_label(image,
                                label,
-                               crop_height,
-                               crop_width,
+                               crop_height=None,
+                               crop_width=None,
                                min_resize_value=None,
                                max_resize_value=None,
                                resize_factor=None,
@@ -65,6 +65,17 @@ def preprocess_image_and_label(image,
                                is_training=True,
                                model_variant=None):
   """Preprocesses the image and label.
+
+  Training(must have crop sizes):
+  1. Resize image and label to the desired range.
+  2. randomly scaling the inputs.
+  3. Pad image and label to have dimensions >= [crop_height, crop_width].
+  4. Randomly crop the image and label.
+  5. Randomly left-right flip the image and label.
+
+  Nont training(with crop sizes):
+  1. Resize image and label to the desired range.
+  2. Pad image and label to have dimensions >= [crop_height, crop_width].
 
   Args:
     image: Input image.
@@ -95,10 +106,9 @@ def preprocess_image_and_label(image,
   """
   if is_training and label is None:
     raise ValueError('During training, label must be provided.')
-  if model_variant is None:
-    tf.logging.warning('Default mean-subtraction is performed. Please specify '
-                       'a model_variant. See feature_extractor.network_map for '
-                       'supported model variants.')
+  
+  if is_training and (crop_height is None or crop_width is None):
+    raise ValueError('During training, crop height and crop width must be provided')
 
   # Keep reference to original image.
   original_image = image
@@ -108,7 +118,7 @@ def preprocess_image_and_label(image,
   if label is not None:
     label = tf.cast(label, tf.int32)
 
-  # Resize image and label to the desired range.
+  # 1. Resize image and label to the desired range.
   if min_resize_value or max_resize_value:
     [processed_image, label] = (
         preprocess_utils.resize_to_range(
@@ -121,7 +131,7 @@ def preprocess_image_and_label(image,
     # The `original_image` becomes the resized image.
     original_image = tf.identity(processed_image)
 
-  # Data augmentation by randomly scaling the inputs.
+  # 2. Data augmentation by randomly scaling the inputs.
   if is_training:
     scale = preprocess_utils.get_random_scale(
         min_scale_factor, max_scale_factor, scale_factor_step_size)
@@ -129,32 +139,33 @@ def preprocess_image_and_label(image,
         processed_image, label, scale)
     processed_image.set_shape([None, None, 3])
 
-  # Pad image and label to have dimensions >= [crop_height, crop_width]
-  image_shape = tf.shape(processed_image)
-  image_height = image_shape[0]
-  image_width = image_shape[1]
+  # 3. Pad image and label to have dimensions >= [crop_height, crop_width]
+  if crop_height is not None and crop_width is not None:
+    image_shape = tf.shape(processed_image)
+    image_height = image_shape[0]
+    image_width = image_shape[1]
 
-  target_height = image_height + tf.maximum(crop_height - image_height, 0)
-  target_width = image_width + tf.maximum(crop_width - image_width, 0)
+    target_height = image_height + tf.maximum(crop_height - image_height, 0)
+    target_width = image_width + tf.maximum(crop_width - image_width, 0)
 
-  # Pad image with mean pixel value.
-  mean_pixel = tf.reshape(
-      get_mean_pixel(model_variant), [1, 1, 3])
-  processed_image = preprocess_utils.pad_to_bounding_box(
-      processed_image, 0, 0, target_height, target_width, mean_pixel)
+    # Pad image with mean pixel value.
+    mean_pixel = tf.reshape(
+        get_mean_pixel(model_variant), [1, 1, 3])
+    processed_image = preprocess_utils.pad_to_bounding_box(
+        processed_image, 0, 0, target_height, target_width, mean_pixel)
 
-  if label is not None:
-    label = preprocess_utils.pad_to_bounding_box(
-        label, 0, 0, target_height, target_width, ignore_label)
+    if label is not None:
+      label = preprocess_utils.pad_to_bounding_box(
+          label, 0, 0, target_height, target_width, ignore_label)
 
-  # Randomly crop the image and label.
+  # 4. Randomly crop the image and label.
   if is_training and label is not None:
     processed_image, label = preprocess_utils.random_crop(
         [processed_image, label], crop_height, crop_width)
 
   processed_image.set_shape([crop_height, crop_width, 3])
 
-  if label is not None:
+  if label is not None and crop_height is not None and crop_width is not None:
     label.set_shape([crop_height, crop_width, 1])
 
   if is_training:

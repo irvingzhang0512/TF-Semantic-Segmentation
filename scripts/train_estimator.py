@@ -3,7 +3,8 @@ import argparse
 import tensorflow as tf
 import os
 
-from builders import model_estimator_builder, dataset_builder
+from builders import model_estimator_builder, dataset_config_builders
+from datasets import dataset_utils
 from tensorflow.contrib.distribute import MirroredStrategy
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
@@ -17,7 +18,6 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
-
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -54,27 +54,24 @@ def parse_args():
                         help='The number of images to used for validations')
 
     # 数据集类型
-    parser.add_argument('--datasets', type=str, default="CamVid",
-                        help='Dataset you are using.')
-    parser.add_argument('--dataset_root_path', type=str, default="./CamVid",
-                        help='Dataset you are using.')
-
+    parser.add_argument('--dataset_name', type=str, default="",
+                        help='')
+    parser.add_argument('--dataset_dir', type=str, default="",
+                        help='')    
+    parser.add_argument('--train_split_name', type=str, default="train", help='')
+    parser.add_argument('--val_split_name', type=str, default="val", help='')
+    
     # 图像预处理参数（包括图像增广）
-    parser.add_argument('--crop_height', type=int, default=512,
-                        help='Height of cropped input image to network')
-    parser.add_argument('--crop_width', type=int, default=512,
-                        help='Width of cropped input image to network')
-    parser.add_argument('--h_flip', type=str2bool, default=True,
-                        help='Whether to randomly flip the image horizontally for data augmentation')
-    parser.add_argument('--v_flip', type=str2bool, default=False,
-                        help='Whether to randomly flip the image vertically for data augmentation')
-    parser.add_argument('--brightness', type=float, default=0.1,
-                        help='Whether to randomly change the image brightness for data augmentation. '
-                             'Specifies the max brightness change as a factor between 0.0 and 1.0. '
-                             'For example, 0.1 represents a max brightness change of 10%% (+-).')
-    parser.add_argument('--rotation', type=float, default=None,
-                        help='Whether to randomly rotate the image for data augmentation. '
-                             'Specifies the max rotation angle in degrees.')
+    parser.add_argument('--crop_height', type=int, default=512)
+    parser.add_argument('--crop_width', type=int, default=512)
+    parser.add_argument('--min_resize_value', type=int, default=None)
+    parser.add_argument('--max_resize_value', type=int, default=None)
+    parser.add_argument('--resize_factor', type=float, default=None) 
+    parser.add_argument('--min_scale_factor', type=float, default=1.)
+    parser.add_argument('--max_scale_factor', type=float, default=1.) 
+    parser.add_argument('--scale_factor_step_size', type=float, default=0.)
+    parser.add_argument('--num_readers', type=int, default=1)
+
 
     # 模型相关参数
     parser.add_argument('--model', type=str, default="Encoder-Decoder",
@@ -105,39 +102,56 @@ def get_default_optimizer(config):
 
 if __name__ == '__main__':
     args = parse_args()
-
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_devices
 
-    dataset_configs = dataset_builder.get_default_configs(args.dataset)
-    dataset_configs['crop_height'] = args.crop_height
-    dataset_configs['crop_width'] = args.crop_width
-    dataset_configs['h_flip'] = args.h_flip
-    dataset_configs['v_flip'] = args.v_flip
-    dataset_configs['brightness'] = args.brightness
-    dataset_configs['rotation'] = args.rotation
-    dataset_configs['batch_size'] = args.batch_size
-    dataset_configs['root_path'] = args.dataset_root_path
-    dataset_configs['preprocessing_type'] = 'tf'
+    dataset_meta = dataset_utils.get_dataset_meta(args.dataset_name)
+    
 
-    num_classes = 32
-
-    def _train_input_fn():
-        train_set, _, _ = dataset_builder.build_dataset(args.dataset, 'train', dataset_configs)
-        return train_set.make_one_shot_iterator().get_next()
+    def _train_input_fn(): 
+        dataset_configs = dataset_config_builders.get_default_config(
+            dataset_name=args.dataset_name,
+            split_name=args.train_split_name, 
+            dataset_dir=args.dataset_dir, 
+            batch_size=args.batch_size,
+            crop_size=(args.crop_height, args.crop_width),
+            min_resize_value=args.min_resize_value,
+            max_resize_value=args.max_resize_value,
+            resize_factor=args.resize_factor,
+            min_scale_factor=args.min_scale_factor,
+            max_scale_factor=args.max_scale_factor,
+            scale_factor_step_size=args.scale_factor_step_size,
+            num_readers=args.num_readers,
+            is_training=True,
+            should_shuffle=True,
+        )
+        dataset = dataset_utils.get_dataset(**dataset_configs)
+        dataset = dataset_utils.get_estimator_dataset(dataset, True, dataset_meta.ignore_label)
+        return dataset
 
     def _val_input_fn():
-        val_set, _, _ = dataset_builder.build_dataset(args.dataset, 'val', dataset_configs)
-        return val_set.make_one_shot_iterator().get_next()
+        dataset_configs = dataset_config_builders.get_default_config(
+            dataset_name=args.dataset_name,
+            split_name=args.val_split_name, 
+            dataset_dir=args.dataset_dir, 
+            batch_size=1,
+            crop_size=(args.crop_height, args.crop_width),
+            is_training=False,
+            should_shuffle=True,
+        )
+        dataset = dataset_utils.get_dataset(**dataset_configs)
+        dataset = dataset_utils.get_estimator_dataset(dataset, True, dataset_meta.ignore_label)
+        return dataset
 
     # 把logs保存到 ./{logs_root_path}/logs-{datasets}-{model}-{losg_name} 中
-    logs_path = os.path.join(args.logs_root_path, 'logs-{}-{}-{}'.format(args.dataset, args.model, args.logs_name))
+    logs_path = os.path.join(args.logs_root_path, 'logs-{}-{}-{}'.format(args.dataset_name, args.model, args.logs_name))
 
     strategy = None if args.num_gpus == 1 else MirroredStrategy(num_gpus=args.num_gpus)
     session_config = tf.ConfigProto(allow_soft_placement=True)
     session_config.gpu_options.allow_growth = True
     optimizer = get_default_optimizer(args)
     estimator = tf.estimator.Estimator(model_fn=model_estimator_builder.build_model_fn(args.model,
-                                                                                       num_classes, optimizer),
+                                                                                       dataset_meta.num_classes, 
+                                                                                       optimizer),
                                        model_dir=logs_path,
                                        config=tf.estimator.RunConfig(
                                            save_checkpoints_steps=args.saving_every_n_steps,

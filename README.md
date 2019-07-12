@@ -29,3 +29,27 @@
 + `frontends`
 + `scripts`
 + `utils`
+
+
+## 4. Scripts
+```shell
+python scripts/train_estimator.py \
+    --num_epochs=25 \
+    --epoch_start_i=0 \
+    --batch_size=1 \
+    --num_gpus=1 \
+    --gpu_devices="3" \
+    --learning_rate_start=0.001 \
+    --optimizer_decay=0.995 \
+    --dataset_name="pascal_voc_seg" \
+    --dataset_dir="/ssd/zhangyiyang/data/VOCdevkit/segmentation_tfrecords" \
+    --crop_height=512 \
+    --crop_width=512 \
+    --min_resize_value=512 \
+    --min_scale_factor=1. \
+    --max_scale_factor=1. \
+    --model="Encoder-Decoder" \
+    --saving_every_n_steps=100 \
+    --logging_every_n_steps=5 \
+    --summary_every_n_steps=10
+```
