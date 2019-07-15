@@ -1,6 +1,7 @@
 # Semantic Segmentation Suite
-+ original repo: (GeorgeSeif/Semantic-Segmentation-Suite)[https://github.com/GeorgeSeif/Semantic-Segmentation-Suite]
-+ (tensorflow/models/research/deeplab)[https://github.com/tensorflow/models/tree/master/research/deeplab]
++ original repo: 
+  + (GeorgeSeif/Semantic-Segmentation-Suite)[https://github.com/GeorgeSeif/Semantic-Segmentation-Suite]
+  + (tensorflow/models/research/deeplab)[https://github.com/tensorflow/models/tree/master/research/deeplab]
 
 ## 1. Targets
 + generate tfrecord files for several open source segmentation datasets.
@@ -12,13 +13,15 @@
 ## 2. TODO
 
 ### 2.1. dataset:
-+ [x] use tensorflow to implement all data argument tools instead of `cv2`.
-+ [x] generate tfrecord utils.
-+ [x] utils to get `tf.data.Dataset` by tfrecord files.
-+ [x] ade20k
-+ [x] cityscape
-+ [x] voc
 + [ ] camvid
+
+
+### 2.2. predict
++ [ ] get results with original image size(such as [500, 375]).
+
+
+### 2.3. trainining
++ [ ] get training results for multi-model and multi-dataset.
 
 
 ## 3. Project Architecture
@@ -36,20 +39,20 @@
 python scripts/train_estimator.py \
     --num_epochs=25 \
     --epoch_start_i=0 \
-    --batch_size=1 \
+    --batch_size=8 \
     --num_gpus=1 \
     --gpu_devices="3" \
-    --learning_rate_start=0.001 \
-    --optimizer_decay=0.995 \
     --dataset_name="pascal_voc_seg" \
     --dataset_dir="/ssd/zhangyiyang/data/VOCdevkit/segmentation_tfrecords" \
-    --crop_height=512 \
-    --crop_width=512 \
-    --min_resize_value=512 \
-    --min_scale_factor=1. \
-    --max_scale_factor=1. \
-    --model="Encoder-Decoder" \
-    --saving_every_n_steps=100 \
-    --logging_every_n_steps=5 \
-    --summary_every_n_steps=10
+    --crop_height=513 \
+    --crop_width=513 \
+    --min_scale_factor=0.5 \
+    --max_scale_factor=2. \
+    --scale_factor_step_size=0.25 \
+    --model="DeepLabV3" \
+    --saving_every_n_steps=200 \
+    --logging_every_n_steps=20 \
+    --summary_every_n_steps=20 \
+    --num_val_images=1000 \
+    --logs_name 2
 ```

@@ -27,7 +27,7 @@ def parse_args():
                         help='Number of epochs to train for')
     parser.add_argument('--epoch_start_i', type=int, default=0,
                         help='Start counting epochs from this number')
-    parser.add_argument('--batch_size', type=int, default=1,
+    parser.add_argument('--batch_size', type=int, default=8,
                         help='Number of images in each batch per gpu. '
                              'If there are multiple gpus, tf.data will get batch_size * num_gpus.')
     parser.add_argument('--logs_root_path', type=str, default="./logs",
@@ -41,11 +41,25 @@ def parse_args():
     parser.add_argument('--gpu_devices', type=str, default="3",
                         help='select gpus, use in "CUDA_VISIBLE_DEVICES"')
 
-    # 学习率相关
-    parser.add_argument('--learning_rate_start', type=float, default=0.001,
-                        help='')
-    parser.add_argument('--optimizer_decay', type=float, default=0.995,
-                        help='')
+    # learning rate
+    parser.add_argument('--learning_policy', type=str, default='poly',
+                        help='Learning rate policy for training. [poly, step]')
+    parser.add_argument('--base_learning_rate', type=float, default=0.0001,
+                        help='The base learning rate for model training.')
+    parser.add_argument('--learning_rate_decay_factor', type=float, default=0.1,
+                        help='The rate to decay the base learning rate.')
+    parser.add_argument('--learning_rate_decay_step', type=int, default=2000,
+                        help='Decay the base learning rate at a fixed step.')
+    parser.add_argument('--learning_power', type=float, default=0.9,
+                        help='The power value used in the poly learning policy.')
+    parser.add_argument('--training_number_of_steps', type=int, default=4500,
+                        help='The number of steps used for training')
+    parser.add_argument('--slow_start_step', type=int, default=0,
+                        help='The number of steps used for training')
+    parser.add_argument('--slow_start_learning_rate', type=float, default=1e-4,
+                        help='The number of steps used for training')
+    parser.add_argument('--momentum', type=float, default=0.9,
+                        help='The momentum value to use')
 
     # val相关
     parser.add_argument('--validation_step', type=int, default=1,
@@ -74,30 +88,22 @@ def parse_args():
 
 
     # 模型相关参数
-    parser.add_argument('--model', type=str, default="Encoder-Decoder",
+    parser.add_argument('--model', type=str, default="DeepLabV3",
                         help='The model you are using. See model_estimator_builder.py for supported models')
     parser.add_argument('--frontend', type=str, default="ResNet101",
                         help='The frontend you are using. See frontend_builder.py for supported models')
+    parser.add_argument('--pretrained_dir', type=str, default="/ssd/zhangyiyang/data/slim",
+                        help='The directory to save all pre-tranied models.')
 
     # save, log, summary 相关参数
-    parser.add_argument('--saving_every_n_steps', type=int, default=400,
+    parser.add_argument('--saving_every_n_steps', type=int, default=200,
                         help='')
-    parser.add_argument('--logging_every_n_steps', type=int, default=50,
+    parser.add_argument('--logging_every_n_steps', type=int, default=20,
                         help='')
-    parser.add_argument('--summary_every_n_steps', type=int, default=50,
+    parser.add_argument('--summary_every_n_steps', type=int, default=20,
                         help='')
 
     return parser.parse_args()
-
-
-def get_learning_rate(config):
-    # TODO: use learning rate
-    return config.learning_rate_start
-
-
-def get_default_optimizer(config):
-    return tf.train.RMSPropOptimizer(learning_rate=get_learning_rate(config),
-                                     decay=config.optimizer_decay)
 
 
 if __name__ == '__main__':
@@ -148,10 +154,10 @@ if __name__ == '__main__':
     strategy = None if args.num_gpus == 1 else MirroredStrategy(num_gpus=args.num_gpus)
     session_config = tf.ConfigProto(allow_soft_placement=True)
     session_config.gpu_options.allow_growth = True
-    optimizer = get_default_optimizer(args)
-    estimator = tf.estimator.Estimator(model_fn=model_estimator_builder.build_model_fn(args.model,
-                                                                                       dataset_meta.num_classes, 
-                                                                                       optimizer),
+    estimator = tf.estimator.Estimator(model_fn=model_estimator_builder.build_model_fn(model_name=args.model,
+                                                                                       num_classes=dataset_meta.num_classes, 
+                                                                                       frontend=args.frontend,
+                                                                                       pretrained_dir=args.pretrained_dir),
                                        model_dir=logs_path,
                                        config=tf.estimator.RunConfig(
                                            save_checkpoints_steps=args.saving_every_n_steps,
@@ -160,7 +166,17 @@ if __name__ == '__main__':
                                            train_distribute=strategy,
                                            session_config=session_config,
                                        ),
-                                       params={})
+                                       params={
+                                           "learning_policy": args.learning_policy, 
+                                           'base_learning_rate': args.base_learning_rate,
+                                           'learning_rate_decay_step': args.learning_rate_decay_step, 
+                                           'learning_rate_decay_factor': args.learning_rate_decay_factor,
+                                           'training_number_of_steps': args.training_number_of_steps, 
+                                           'learning_power': args.learning_power,
+                                           'slow_start_step': args.slow_start_step, 
+                                           'slow_start_learning_rate': args.slow_start_learning_rate,
+                                           'momentum': args.momentum,
+                                       })
     for i in range(args.epoch_start_i, args.num_epochs):
         # train
         estimator.train(_train_input_fn)

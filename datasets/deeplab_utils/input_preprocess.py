@@ -132,6 +132,7 @@ def preprocess_image_and_label(image,
     original_image = tf.identity(processed_image)
 
   # 2. Data augmentation by randomly scaling the inputs.
+  # (training only)
   if is_training:
     scale = preprocess_utils.get_random_scale(
         min_scale_factor, max_scale_factor, scale_factor_step_size)
@@ -159,6 +160,7 @@ def preprocess_image_and_label(image,
           label, 0, 0, target_height, target_width, ignore_label)
 
   # 4. Randomly crop the image and label.
+  # (training only)
   if is_training and label is not None:
     processed_image, label = preprocess_utils.random_crop(
         [processed_image, label], crop_height, crop_width)
@@ -168,8 +170,9 @@ def preprocess_image_and_label(image,
   if label is not None and crop_height is not None and crop_width is not None:
     label.set_shape([crop_height, crop_width, 1])
 
+  # 5. Randomly left-right flip the image and label.
+  # (training only)
   if is_training:
-    # Randomly left-right flip the image and label.
     processed_image, label, _ = preprocess_utils.flip_dim(
         [processed_image, label], _PROB_OF_FLIP, dim=1)
 
