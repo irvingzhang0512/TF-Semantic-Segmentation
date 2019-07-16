@@ -66,17 +66,17 @@ tf.app.flags.DEFINE_string('image_folder',
 
 tf.app.flags.DEFINE_string(
     'semantic_segmentation_folder',
-    '/ssd/zhangyiyang/data/VOCdevkit/VOC2012/SegmentationClass',
+    '/ssd/zhangyiyang/data/VOCdevkit/VOC2012/SegmentationClassAug',
     'Folder containing semantic segmentation annotations.')
 
 tf.app.flags.DEFINE_string(
     'list_folder',
-    '/ssd/zhangyiyang/data/VOCdevkit/VOC2012/ImageSets/Segmentation',
+    '/ssd/zhangyiyang/data/VOCdevkit/VOC2012/ImageSets/SegmentationAug',
     'Folder containing lists for training and validation')
 
 tf.app.flags.DEFINE_string(
     'output_dir',
-    '/ssd/zhangyiyang/data/segmentation_tfrecords',
+    '/ssd/zhangyiyang/data/VOCdevkit/segmentation_aug_tfrecords',
     'Path to save converted SSTable of TensorFlow examples.')
 
 

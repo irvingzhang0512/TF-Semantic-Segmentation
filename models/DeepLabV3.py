@@ -31,7 +31,7 @@ def ConvBlock(inputs, n_filters, kernel_size=[3, 3]):
     return net
 
 
-def AtrousSpatialPyramidPoolingModule(inputs, depth=256):
+def AtrousSpatialPyramidPoolingModule(inputs, depth=256, weight_decay=0.0001):
     """
 
     ASPP consists of (a) one 1×1 convolution and three 3×3 convolutions with rates = (6, 12, 18) when output stride = 16
@@ -82,15 +82,15 @@ def build_deeplabv3(inputs, num_classes,
 
     logits, end_points, frontend_scope, init_fn = frontend_builder.build_frontend(inputs, frontend,
                                                                                   pretrained_dir=pretrained_dir,
-                                                                                  is_training=is_training)
-
-    label_size = tf.shape(inputs)[1:3]
-
-    net = AtrousSpatialPyramidPoolingModule(end_points['pool4'])
-
-    net = Upsampling(net, label_size)
-
-    net = slim.conv2d(net, num_classes, [1, 1], activation_fn=None, scope='logits')
+                                                                                  is_training=is_training,
+                                                                                  weight_decay=weight_decay)
+    with slim.arg_scope(
+        [slim.conv2d],
+        weights_regularizer=slim.l2_regularizer(weight_decay)):
+        label_size = tf.shape(inputs)[1:3]
+        net = AtrousSpatialPyramidPoolingModule(end_points['pool4'])
+        net = Upsampling(net, label_size)
+        net = slim.conv2d(net, num_classes, [1, 1], activation_fn=None, scope='logits')
 
     return net, init_fn
 

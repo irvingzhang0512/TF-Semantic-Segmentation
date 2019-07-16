@@ -30,7 +30,8 @@ def conv_transpose_block(inputs, n_filters, kernel_size=[3, 3], dropout_p=0.0):
     return out
 
 
-def build_encoder_decoder(inputs, num_classes, preset_model="Encoder-Decoder", dropout_p=0.5, scope=None):
+def build_encoder_decoder(inputs, num_classes, preset_model="Encoder-Decoder", weight_decay=0.00001,
+                          dropout_p=0.5, scope=None):
     """
     Builds the Encoder-Decoder model. Inspired by SegNet with some modifications
     Optionally includes skip connections
@@ -53,73 +54,75 @@ def build_encoder_decoder(inputs, num_classes, preset_model="Encoder-Decoder", d
             "Unsupported Encoder-Decoder model '%s'. "
             "This function only supports Encoder-Decoder and Encoder-Decoder-Skip" % (
                 preset_model))
+    with slim.arg_scope(
+        [slim.conv2d],
+        weights_regularizer=slim.l2_regularizer(weight_decay)):
+        #####################
+        # Downsampling path #
+        #####################
+        net = conv_block(inputs, 64)
+        net = conv_block(net, 64)
+        net = slim.pool(net, [2, 2], stride=[2, 2], pooling_type='MAX')
+        skip_1 = net
 
-    #####################
-    # Downsampling path #
-    #####################
-    net = conv_block(inputs, 64)
-    net = conv_block(net, 64)
-    net = slim.pool(net, [2, 2], stride=[2, 2], pooling_type='MAX')
-    skip_1 = net
+        net = conv_block(net, 128)
+        net = conv_block(net, 128)
+        net = slim.pool(net, [2, 2], stride=[2, 2], pooling_type='MAX')
+        skip_2 = net
 
-    net = conv_block(net, 128)
-    net = conv_block(net, 128)
-    net = slim.pool(net, [2, 2], stride=[2, 2], pooling_type='MAX')
-    skip_2 = net
+        net = conv_block(net, 256)
+        net = conv_block(net, 256)
+        net = conv_block(net, 256)
+        net = slim.pool(net, [2, 2], stride=[2, 2], pooling_type='MAX')
+        skip_3 = net
 
-    net = conv_block(net, 256)
-    net = conv_block(net, 256)
-    net = conv_block(net, 256)
-    net = slim.pool(net, [2, 2], stride=[2, 2], pooling_type='MAX')
-    skip_3 = net
+        net = conv_block(net, 512)
+        net = conv_block(net, 512)
+        net = conv_block(net, 512)
+        net = slim.pool(net, [2, 2], stride=[2, 2], pooling_type='MAX')
+        skip_4 = net
 
-    net = conv_block(net, 512)
-    net = conv_block(net, 512)
-    net = conv_block(net, 512)
-    net = slim.pool(net, [2, 2], stride=[2, 2], pooling_type='MAX')
-    skip_4 = net
+        net = conv_block(net, 512)
+        net = conv_block(net, 512)
+        net = conv_block(net, 512)
+        net = slim.pool(net, [2, 2], stride=[2, 2], pooling_type='MAX')
 
-    net = conv_block(net, 512)
-    net = conv_block(net, 512)
-    net = conv_block(net, 512)
-    net = slim.pool(net, [2, 2], stride=[2, 2], pooling_type='MAX')
+        #####################
+        # Upsampling path #
+        #####################
+        net = conv_transpose_block(net, 512)
+        net = conv_block(net, 512)
+        net = conv_block(net, 512)
+        net = conv_block(net, 512)
+        if has_skip:
+            net = tf.add(net, skip_4)
 
-    #####################
-    # Upsampling path #
-    #####################
-    net = conv_transpose_block(net, 512)
-    net = conv_block(net, 512)
-    net = conv_block(net, 512)
-    net = conv_block(net, 512)
-    if has_skip:
-        net = tf.add(net, skip_4)
+        net = conv_transpose_block(net, 512)
+        net = conv_block(net, 512)
+        net = conv_block(net, 512)
+        net = conv_block(net, 256)
+        if has_skip:
+            net = tf.add(net, skip_3)
 
-    net = conv_transpose_block(net, 512)
-    net = conv_block(net, 512)
-    net = conv_block(net, 512)
-    net = conv_block(net, 256)
-    if has_skip:
-        net = tf.add(net, skip_3)
+        net = conv_transpose_block(net, 256)
+        net = conv_block(net, 256)
+        net = conv_block(net, 256)
+        net = conv_block(net, 128)
+        if has_skip:
+            net = tf.add(net, skip_2)
 
-    net = conv_transpose_block(net, 256)
-    net = conv_block(net, 256)
-    net = conv_block(net, 256)
-    net = conv_block(net, 128)
-    if has_skip:
-        net = tf.add(net, skip_2)
+        net = conv_transpose_block(net, 128)
+        net = conv_block(net, 128)
+        net = conv_block(net, 64)
+        if has_skip:
+            net = tf.add(net, skip_1)
 
-    net = conv_transpose_block(net, 128)
-    net = conv_block(net, 128)
-    net = conv_block(net, 64)
-    if has_skip:
-        net = tf.add(net, skip_1)
+        net = conv_transpose_block(net, 64)
+        net = conv_block(net, 64)
+        net = conv_block(net, 64)
 
-    net = conv_transpose_block(net, 64)
-    net = conv_block(net, 64)
-    net = conv_block(net, 64)
-
-    #####################
-    #      Softmax      #
-    #####################
-    net = slim.conv2d(net, num_classes, [1, 1], activation_fn=None, scope='logits')
+        #####################
+        #      Softmax      #
+        #####################
+        net = slim.conv2d(net, num_classes, [1, 1], activation_fn=None, scope='logits')
     return net

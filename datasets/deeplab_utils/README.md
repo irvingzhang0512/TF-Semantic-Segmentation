@@ -20,18 +20,52 @@
 ```
 + VOCdevkit
     + VOC2012
-    + JPEGImages
-    + SegmentationClass
-    + SegmentationClassRaw(new directory)
-    + ImageSets
-        + Segmentation
-    + segmentation_tfrecords(new directory)
+        + JPEGImages
+        + SegmentationClass
+        + SegmentationClassRaw(new directory)
+        + ImageSets
+            + Segmentation
+        + segmentation_tfrecords(new directory)
 ```
 + command
     + Step 1: under `./TF-Semantic-Segmentation` path, `python datasets/deeplab_utils/remove_gt_colormap.py --original_gt_folder {/path/to/SegmentationClass} --output_dir {/path/to/SegmentationClassRaw}`
     + Step 2: under `./TF-Semantic-Segmentation` path, `python datasets/deeplab_utils/build_voc2012_data.py --image_format jpg`
+```
+python datasets/deeplab_utils/build_voc2012_data.py \
+    --image_format jpg \
+    --image_folder /path/to/JPEGImages \
+    --semantic_segmentation_folder /path/to/SegmentationClassRaw \
+    --list_folder /path/to/Segmentation \
+    --output_dir /path/to/segmentation_tfrecords
+```
 
-### 1.2. ADE20k
+### 1.2. VOC2012 aug
++ script: `build_voc2012_data.py`
++ Recommended directory structure:
+```
++ VOCdevkit
+    + VOC2012
+    + JPEGImages
+    + SegmentationClassAug(Download from https://www.dropbox.com/s/oeu149j8qtbs1x0/SegmentationClassAug.zip?dl=0)
+    + ImageSets
+        + SegmentationAug(Download from https://github.com/rishizek/tensorflow-deeplab-v3/tree/master/dataset)
+                         (rename train.txt to train_aug.txt, move val.txt, ignore test.txt)
+    + segmentation_aug_tfrecords(new directory)
+```
++ command
+    + Step 2: under `./TF-Semantic-Segmentation` path, run the following command
+```shell
+python datasets/deeplab_utils/build_voc2012_data.py \
+    --image_format jpg \
+    --image_folder /path/to/JPEGImages \
+    --semantic_segmentation_folder /path/to/SegmentationClassAug \
+    --list_folder /path/to/SegmentationAug \
+    --output_dir /path/to/segmentation_aug_tfrecords
+```
+
+
+
+### 1.3. ADE20k
 + script: `build_ade20k_data.py`
 + Recommended directory structure:
 ```
@@ -48,8 +82,7 @@
 + command (under `./TF-Semantic-Segmentation` path): `python datasets/deeplab_utils/build_ade20k_data.py --image_format jpg`
 
 
-
-### 1.3. CityScapes
+### 1.4. CityScapes
 + script: `build_cityscapes_data.py`
 + Recommended directory structure:
 ```

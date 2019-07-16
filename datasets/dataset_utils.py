@@ -66,60 +66,9 @@ IMAGE_NAME = 'image_name'
 LABEL = 'label'
 TEST_SET = 'test'
 
-# Named tuple to describe the dataset properties.
-DatasetDescriptor = collections.namedtuple(
-    'DatasetDescriptor',
-    [
-        'splits_to_sizes',  # Splits of the dataset into training, val and test.
-        'num_classes',  # Number of semantic classes, including the
-                        # background class (if exists). For example, there
-                        # are 20 foreground classes + 1 background class in
-                        # the PASCAL VOC 2012 dataset. Thus, we set
-                        # num_classes=21.
-        'ignore_label',  # Ignore label value.
-    ])
-
-_CITYSCAPES_INFORMATION = DatasetDescriptor(
-    splits_to_sizes={
-        'train': 2975,
-        'val': 500,
-    },
-    num_classes=19,
-    ignore_label=255,
-)
-
-_PASCAL_VOC_SEG_INFORMATION = DatasetDescriptor(
-    splits_to_sizes={
-        'train': 1464,
-        'train_aug': 10582,
-        'trainval': 2913,
-        'val': 1449,
-    },
-    num_classes=21,
-    ignore_label=255,
-)
-
-_ADE20K_INFORMATION = DatasetDescriptor(
-    splits_to_sizes={
-        'train': 20210,  # num of samples in images/training
-        'val': 2000,  # num of samples in images/validation
-    },
-    num_classes=151,
-    ignore_label=0,
-)
-
-_DATASETS_INFORMATION = {
-    'cityscapes': _CITYSCAPES_INFORMATION,
-    'pascal_voc_seg': _PASCAL_VOC_SEG_INFORMATION,
-    'ade20k': _ADE20K_INFORMATION,
-}
 
 # Default file pattern of TFRecord of TensorFlow Example.
 _FILE_PATTERN = '%s-*'
-
-
-def get_cityscapes_dataset_name():
-  return 'cityscapes'
 
 
 def _get_all_files(dataset_dir, split_name):
@@ -137,6 +86,7 @@ def _get_all_files(dataset_dir, split_name):
 
 def get_dataset(dataset_name,
                split_name,
+               ignore_label,
                dataset_dir,
                batch_size,
                crop_size,
@@ -178,16 +128,6 @@ def get_dataset(dataset_name,
   Raises:
     ValueError: Dataset name and split name are not supported.
   """
-  if dataset_name not in _DATASETS_INFORMATION:
-    raise ValueError('The specified dataset is not supported yet.')
-
-  splits_to_sizes = _DATASETS_INFORMATION[dataset_name].splits_to_sizes
-  if split_name not in splits_to_sizes:
-    raise ValueError('data split name %s not recognized' % split_name)
-  
-  num_of_classes = _DATASETS_INFORMATION[dataset_name].num_classes
-  ignore_label = _DATASETS_INFORMATION[dataset_name].ignore_label
-
   def _parse_function(example_proto):
     """Function to parse the example proto.
 
@@ -323,10 +263,6 @@ def get_dataset(dataset_name,
   dataset = dataset.batch(batch_size).prefetch(batch_size)
   
   return dataset
-
-
-def get_dataset_meta(dataset_name):
-  return _DATASETS_INFORMATION[dataset_name]
 
 
 def get_estimator_dataset(dataset, with_label, ignore_label=255):

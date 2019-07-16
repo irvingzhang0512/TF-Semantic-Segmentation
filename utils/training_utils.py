@@ -6,6 +6,7 @@ def get_model_learning_rate(learning_policy,
                             learning_rate_decay_factor,
                             training_number_of_steps,
                             learning_power,
+                            end_learning_rate,
                             slow_start_step,
                             slow_start_learning_rate,
                             slow_start_burnin_type='none'):
@@ -61,7 +62,7 @@ def get_model_learning_rate(learning_policy,
         base_learning_rate,
         adjusted_global_step,
         training_number_of_steps,
-        end_learning_rate=0,
+        end_learning_rate=end_learning_rate,
         power=learning_power)
   else:
     raise ValueError('Unknown learning policy.')
