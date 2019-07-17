@@ -4,7 +4,6 @@ import os
 import cv2
 import numpy as np
 
-from utils import helpers
 from builders import model_estimator_builder, dataset_config_builders
 from datasets import dataset_utils
 
