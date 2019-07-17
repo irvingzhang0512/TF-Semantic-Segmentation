@@ -162,7 +162,7 @@ if __name__ == '__main__':
                                        model_dir=logs_path,
                                        config=tf.estimator.RunConfig(
                                            save_checkpoints_steps=args.saving_every_n_steps,
-                                           log_step_count_steps=args.logging_every_n_steps,
+                                        #    log_step_count_steps=args.logging_every_n_steps,
                                            save_summary_steps=args.summary_every_n_steps,
                                            train_distribute=strategy,
                                            session_config=session_config,
@@ -180,9 +180,20 @@ if __name__ == '__main__':
                                            'momentum': args.momentum,
                                            'weight_decay': args.weight_decay,
                                        })
+    tensors_to_log = {
+      'learning_rate': 'learning_rate',
+      'cross_entropy': 'cross_entropy',
+      'train_px_accuracy': 'train_px_accuracy',
+      'train_mean_iou': 'train_mean_iou',
+    }
+
+    logging_hook = tf.train.LoggingTensorHook(
+        tensors=tensors_to_log, every_n_iter=args.logging_every_n_steps)
+    train_hooks = [logging_hook]
+
     for i in range(args.epoch_start_i, args.num_epochs):
         # train
-        estimator.train(_train_input_fn)
+        estimator.train(_train_input_fn, hooks=train_hooks)
 
         if i % args.validation_step == 0:
             # val every {validation_step} steps

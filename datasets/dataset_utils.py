@@ -268,8 +268,6 @@ def get_dataset(dataset_name,
 def get_estimator_dataset(dataset, with_label, ignore_label=255):
   def _parse_with_label_dataset(sample):
     labels = sample[LABEL]
-    labels = tf.where(
-        tf.equal(labels, ignore_label), tf.zeros_like(labels), labels)
     sample.pop(LABEL, None)
     return sample, labels
 

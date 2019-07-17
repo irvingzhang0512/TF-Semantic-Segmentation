@@ -40,11 +40,11 @@
 python scripts/train_estimator.py \
     --train_split_name="train_aug" \
     --val_split_name="val" \
-    --num_epochs=26 \
+    --num_epochs=46 \
     --epoch_start_i=0 \
     --batch_size=10 \
     --num_gpus=1 \
-    --gpu_devices="2" \
+    --gpu_devices="3" \
     --dataset_name="pascal_voc_seg" \
     --dataset_dir="/ssd/zhangyiyang/data/VOCdevkit/segmentation_aug_tfrecords" \
     --train_crop_height=513 \
@@ -59,10 +59,10 @@ python scripts/train_estimator.py \
     --logging_every_n_steps=50 \
     --summary_every_n_steps=50 \
     --num_val_images=1449 \
-    --base_learning_rate=1e-3 \
+    --base_learning_rate=7e-3 \
     --end_learning_rate=1e-6 \
     --training_number_of_steps=30000 \
-    --weight_decay=2e-4 \
+    --weight_decay=1e-4 \
     --logs_name 1
 ```
 
@@ -103,7 +103,7 @@ python scripts/train_estimator.py \
     --epoch_start_i=0 \
     --batch_size=4 \
     --num_gpus=1 \
-    --gpu_devices="3" \
+    --gpu_devices="2" \
     --dataset_name="cityscapes" \
     --dataset_dir="/ssd/zhangyiyang/data/Cityscapes/tfrecords" \
     --train_crop_height=769 \
@@ -119,7 +119,8 @@ python scripts/train_estimator.py \
     --logging_every_n_steps=50 \
     --summary_every_n_steps=50 \
     --num_val_images=500 \
-    --validation_step=5 \
-    --base_learning_rate=0.001 \
-    --logs_name 5
+    --validation_step=2 \
+    --base_learning_rate=7e-3 \
+    --end_learning_rate=1e-6 \
+    --logs_name 1
 ```
