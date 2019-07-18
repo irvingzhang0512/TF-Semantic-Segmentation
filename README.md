@@ -63,7 +63,7 @@ python scripts/train_estimator.py \
     --end_learning_rate=1e-6 \
     --training_number_of_steps=30000 \
     --weight_decay=1e-4 \
-    --logs_name 1
+    --logs_name 2
 ```
 
 + ade20k
@@ -99,7 +99,7 @@ python scripts/train_estimator.py \
 
 ```shell
 python scripts/train_estimator.py \
-    --num_epochs=120 \
+    --num_epochs=140 \
     --epoch_start_i=0 \
     --batch_size=4 \
     --num_gpus=1 \
@@ -122,5 +122,5 @@ python scripts/train_estimator.py \
     --validation_step=2 \
     --base_learning_rate=7e-3 \
     --end_learning_rate=1e-6 \
-    --logs_name 1
+    --logs_name 2
 ```

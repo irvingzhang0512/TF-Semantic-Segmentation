@@ -10,18 +10,15 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
 def parse_args():
     parser = argparse.ArgumentParser()
-
-    # 训练基本参数
+    
+    # training
+    parser.add_argument('--batch_size', type=int, default=8,
+                        help='Number of images in each batch per gpu. '
+                             'If there are multiple gpus, tf.data will get batch_size * num_gpus.')
+    parser.add_argument('--weight_decay', type=float, default=0.00004,
+                        help='l2 loss.')
     parser.add_argument('--num_epochs', type=int, default=300,
                         help='Number of epochs to train for')
     parser.add_argument('--epoch_start_i', type=int, default=0,
@@ -30,13 +27,8 @@ def parse_args():
                         help='path to save log dirs')
     parser.add_argument('--logs_name', type=str, default="default",
                         help='part of log dir name')
-    
-    # 训练参数
-    parser.add_argument('--batch_size', type=int, default=8,
-                        help='Number of images in each batch per gpu. '
-                             'If there are multiple gpus, tf.data will get batch_size * num_gpus.')
-    parser.add_argument('--weight_decay', type=float, default=0.00004,
-                        help='l2 loss.')
+    parser.add_argument('--clean_model_dir', action='store_true',
+                        help='Whether to clean up the model directory if present.')
 
     # multi-gpu configs
     parser.add_argument('--num_gpus', type=int, default=1,
@@ -61,18 +53,21 @@ def parse_args():
                         help='The number of steps used for training')
     parser.add_argument('--slow_start_learning_rate', type=float, default=1e-4,
                         help='The number of steps used for training')
-    parser.add_argument('--momentum', type=float, default=0.9,
-                        help='The momentum value to use')
     parser.add_argument('--training_number_of_steps', type=int, default=4500,
                         help='The number of steps used for training')
+    
+    # optimizer
+    parser.add_argument('--momentum', type=float, default=0.9,
+                        help='The momentum value to use')
+    
 
-    # val相关
+    # val related
     parser.add_argument('--validation_step', type=int, default=1,
                         help='How often to perform validation (epochs)')
     parser.add_argument('--num_val_images', type=int, default=20,
                         help='The number of images to used for validations')
 
-    # 数据集类型
+    # dataset
     parser.add_argument('--dataset_name', type=str, default="",
                         help='')
     parser.add_argument('--dataset_dir', type=str, default="",
@@ -80,7 +75,7 @@ def parse_args():
     parser.add_argument('--train_split_name', type=str, default="train", help='')
     parser.add_argument('--val_split_name', type=str, default="val", help='')
     
-    # 图像预处理参数（包括图像增广）
+    # image preprocessing and argument
     parser.add_argument('--train_crop_height', type=int, default=513)
     parser.add_argument('--train_crop_width', type=int, default=513)
     parser.add_argument('--eval_crop_height', type=int, default=513)
@@ -93,8 +88,7 @@ def parse_args():
     parser.add_argument('--scale_factor_step_size', type=float, default=0.25)
     parser.add_argument('--num_readers', type=int, default=4)
 
-
-    # 模型相关参数
+    # model related
     parser.add_argument('--model', type=str, default="DeepLabV3",
                         help='The model you are using. See model_estimator_builder.py for supported models')
     parser.add_argument('--frontend', type=str, default="ResNet101",
@@ -102,12 +96,18 @@ def parse_args():
     parser.add_argument('--pretrained_dir', type=str, default="/ssd/zhangyiyang/data/slim",
                         help='The directory to save all pre-tranied models.')
 
-    # save, log, summary 相关参数
+    # resnet frontend params
+    parser.add_argument('--output_stride', type=int, default=16,
+                        help='')
+    
+    # save, log, summary
     parser.add_argument('--saving_every_n_steps', type=int, default=200,
                         help='')
     parser.add_argument('--logging_every_n_steps', type=int, default=20,
                         help='')
     parser.add_argument('--summary_every_n_steps', type=int, default=20,
+                        help='')
+    parser.add_argument('--summary_image_max_number', type=int, default=6,
                         help='')
 
     return parser.parse_args()
@@ -116,10 +116,8 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_devices
-
     dataset_meta = dataset_builder.build_dataset_meta(args.dataset_name)
     
-
     def _train_input_fn(): 
         dataset_configs = dataset_builder.build_dataset_configs(
             dataset_dir=args.dataset_dir, 
@@ -149,8 +147,11 @@ if __name__ == '__main__':
         dataset = dataset_builder.build_dataset(args.dataset_name, args.val_split_name, True, dataset_configs)
         return dataset
 
-    # 把logs保存到 ./{logs_root_path}/logs-{datasets}-{model}-{losg_name} 中
+    # save logs in  `./{logs_root_path}/logs-{datasets}-{model}-{losg_name}`
     logs_path = os.path.join(args.logs_root_path, 'logs-{}-{}-{}'.format(args.dataset_name, args.model, args.logs_name))
+    if args.clean_model_dir:
+        import shutil
+        shutil.rmtree(logs_path, ignore_errors=True)
 
     strategy = None if args.num_gpus == 1 else MirroredStrategy(num_gpus=args.num_gpus)
     session_config = tf.ConfigProto(allow_soft_placement=True)
@@ -168,6 +169,7 @@ if __name__ == '__main__':
                                            session_config=session_config,
                                        ),
                                        params={
+                                           # layer_rate
                                            "learning_policy": args.learning_policy, 
                                            'base_learning_rate': args.base_learning_rate,
                                            'learning_rate_decay_step': args.learning_rate_decay_step, 
@@ -177,8 +179,22 @@ if __name__ == '__main__':
                                            'end_learning_rate': args.end_learning_rate,
                                            'slow_start_step': args.slow_start_step, 
                                            'slow_start_learning_rate': args.slow_start_learning_rate,
+
+                                           # optimizer
                                            'momentum': args.momentum,
+
+                                           # base
                                            'weight_decay': args.weight_decay,
+                                           'batch_size': args.batch_size,
+
+                                           # dataset
+                                           'dataset_name': args.dataset_name,
+
+                                           # model
+                                           'output_stride': args.output_stride,
+
+                                           # summary
+                                           'summary_image_max_number': args.summary_image_max_number,
                                        })
     tensors_to_log = {
       'learning_rate': 'learning_rate',
@@ -189,7 +205,8 @@ if __name__ == '__main__':
 
     logging_hook = tf.train.LoggingTensorHook(
         tensors=tensors_to_log, every_n_iter=args.logging_every_n_steps)
-    train_hooks = [logging_hook]
+    saving_hooks = tf.train.CheckpointSaverHook('./logs/test', save_steps=100)
+    train_hooks = [logging_hook, saving_hooks]
 
     for i in range(args.epoch_start_i, args.num_epochs):
         # train

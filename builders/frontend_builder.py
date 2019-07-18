@@ -1,17 +1,23 @@
 from tensorflow.contrib import slim
-from frontends import resnet_v2
+from tensorflow.contrib.slim.nets import resnet_v2
 from frontends import mobilenet_v2
 from frontends import inception_v4
 import os
+import tensorflow as tf
 
 
 def build_frontend(inputs, frontend, is_training=True, 
                    weight_decay=0.0001,
                    batch_norm_decay=0.997,
-                   pretrained_dir="/ssd/zhangyiyang/data/slim"):
+                   pretrained_dir="/ssd/zhangyiyang/data/slim",
+                   output_stride=None):
     if frontend == 'ResNet50':
         with slim.arg_scope(resnet_v2.resnet_arg_scope(weight_decay=weight_decay, batch_norm_decay=batch_norm_decay)):
-            logits, end_points = resnet_v2.resnet_v2_50(inputs, is_training=is_training, scope='resnet_v2_50')
+            logits, end_points = resnet_v2.resnet_v2_50(inputs, 
+                                                        is_training=is_training,
+                                                        output_stride=output_stride,
+                                                        scope='resnet_v2_50',
+                                                        global_pool=False)
             frontend_scope = 'resnet_v2_50'
             if pretrained_dir is None:
                 init_fn = None
@@ -21,17 +27,24 @@ def build_frontend(inputs, frontend, is_training=True,
                                                         ignore_missing_vars=True)
     elif frontend == 'ResNet101':
         with slim.arg_scope(resnet_v2.resnet_arg_scope(weight_decay=weight_decay, batch_norm_decay=batch_norm_decay)):
-            logits, end_points = resnet_v2.resnet_v2_101(inputs, is_training=is_training, scope='resnet_v2_101')
+            logits, end_points = resnet_v2.resnet_v2_101(inputs, 
+                                                         is_training=is_training, 
+                                                         output_stride=output_stride,
+                                                         scope='resnet_v2_101',
+                                                         global_pool=False)
             frontend_scope = 'resnet_v2_101'
-            if pretrained_dir is None:
-                init_fn = None
-            else:
+            init_fn = None
+            if pretrained_dir is not None:
                 init_fn = slim.assign_from_checkpoint_fn(model_path=os.path.join(pretrained_dir, 'resnet_v2_101.ckpt'),
-                                                            var_list=slim.get_model_variables('resnet_v2_101'),
-                                                            ignore_missing_vars=True)
+                                                         var_list=slim.get_model_variables('resnet_v2_101'),
+                                                         ignore_missing_vars=True)
     elif frontend == 'ResNet152':
         with slim.arg_scope(resnet_v2.resnet_arg_scope(weight_decay=weight_decay, batch_norm_decay=batch_norm_decay)):
-            logits, end_points = resnet_v2.resnet_v2_152(inputs, is_training=is_training, scope='resnet_v2_152')
+            logits, end_points = resnet_v2.resnet_v2_152(inputs, 
+                                                         is_training=is_training, 
+                                                         output_stride=output_stride,
+                                                         scope='resnet_v2_152',
+                                                         global_pool=False)
             frontend_scope = 'resnet_v2_152'
             if pretrained_dir is None:
                 init_fn = None
