@@ -32,7 +32,7 @@ import numpy as np
 _ADE20K = 'ade20k'
 _CITYSCAPES = 'cityscapes'
 _MAPILLARY_VISTAS = 'mapillary_vistas'
-_PASCAL = 'pascal'
+_PASCAL = 'pascal_voc_seg'
 
 # Max number of entries in the colormap for each dataset.
 _DATASET_MAX_ENTRIES = {
@@ -376,7 +376,20 @@ def create_label_colormap(dataset=_PASCAL):
   elif dataset == _PASCAL:
     return create_pascal_label_colormap()
   else:
-    raise ValueError('Unsupported dataset.')
+    raise ValueError('Unsupported dataset {}.'.format(dataset))
+
+
+def decode_labels(mask, num_classes, num_images=1, dataset=_PASCAL):
+  if type(dataset) == bytes:
+    dataset = dataset.decode()
+  n, h, w, c = mask.shape
+  assert (n >= num_images), 'Batch size %d should be greater or equal than number of images to save %d.' \
+                            % (n, num_images)
+  outputs = np.zeros((num_images, h, w, 3), dtype=np.uint8)
+  colormap = create_label_colormap(dataset)
+  for i in range(num_images):
+    outputs[i] = label_to_color_image(mask[i, :, :, 0], dataset)
+  return outputs
 
 
 def label_to_color_image(label, dataset=_PASCAL):
@@ -404,8 +417,7 @@ def label_to_color_image(label, dataset=_PASCAL):
             np.max(label), _DATASET_MAX_ENTRIES[dataset]))
 
   colormap = create_label_colormap(dataset)
-  return colormap[label]
-
+  return np.array(colormap[label]).astype(np.uint8)
 
 def get_dataset_colormap_max_entries(dataset):
   return _DATASET_MAX_ENTRIES[dataset]

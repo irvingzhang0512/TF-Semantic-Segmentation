@@ -1,34 +1,45 @@
 import tensorflow as tf
 from utils.training_utils import get_model_learning_rate
+from datasets.deeplab_utils.get_dataset_colormap import decode_labels
 
 
 __all__ = ['get_estimator_spec', 'get_preprocess_by_frontend', \
            'preprocess_subtract_imagenet_mean', 'preprocess_zero_to_one', 'preprocess_zero_to_one']
 
 
-def get_estimator_spec(mode, logits, init_fn, labels, num_classes=None, params=None, features=None):
-  """
-  Reference: https://github.com/rishizek/tensorflow-deeplab-v3
-  """
+def get_estimator_spec(mode, logits, init_fn, labels, num_classes=None, params=None, **kwargs):
   pred_classes = tf.expand_dims(tf.argmax(logits, axis=3, output_type=tf.int32), axis=3)
+  cur_labels = labels if mode != tf.estimator.ModeKeys.PREDICT else kwargs['features'].get('label')
+  dataset_name = params['dataset_name']
+
+  gt_color_labels = None
+  if cur_labels is not None:
+    gt_color_labels = tf.py_func(decode_labels,
+                                [cur_labels, num_classes, params['batch_size'], dataset_name],
+                                tf.uint8)
+  pred_color_labels = tf.py_func(decode_labels,
+                                [pred_classes, num_classes, params['batch_size'], dataset_name],
+                                tf.uint8)
 
   predictions = {
-      'class_ids': pred_classes,
       'probabilities': tf.nn.softmax(logits),
+      'pred_labels': pred_classes,
+      'pred_color_labels': pred_color_labels,
+      'gt_color_labels': gt_color_labels,
       'logits': logits,
-      'target_file_name': labels,
+      'target_file_name': kwargs['features']['image_name'],
+      'label': cur_labels,
   }
-  if mode == tf.estimator.ModeKeys.PREDICT:
-    predictions['preprocessed_image'] = features['image']
-    predictions['label'] = features['label']
-    return tf.estimator.EstimatorSpec(
-        mode=mode,
-        predictions=predictions)
 
+  if mode == tf.estimator.ModeKeys.PREDICT:
+    predictions['preprocessed_image'] = kwargs['features']['image']
+    return tf.estimator.EstimatorSpec(
+      mode=mode,
+      predictions=predictions)
   predictions.pop('target_file_name')
 
   # base results
-  labels = tf.squeeze(labels, axis=3)  # reduce the channel dimension.
+  labels = tf.squeeze(labels, axis=-1)  # reduce the channel dimension.
   logits_by_num_classes = tf.reshape(logits, [-1, num_classes])
   labels_flat = tf.reshape(labels, [-1, ])
   valid_indices = tf.to_int32(labels_flat <= num_classes - 1)
@@ -52,6 +63,12 @@ def get_estimator_spec(mode, logits, init_fn, labels, num_classes=None, params=N
 
   # get train_op
   if mode == tf.estimator.ModeKeys.TRAIN:
+    if params['summary_image_max_number'] != 0:
+      tf.summary.image('images',
+                      tf.concat(axis=2, values=[tf.cast(kwargs['features']['image'], tf.uint8), 
+                                                gt_color_labels, 
+                                                pred_color_labels]),
+                      max_outputs=params['summary_image_max_number'])  # Concatenate row-wise.
     train_op = _get_train_op(params, loss)
   else:
     train_op = None
@@ -65,7 +82,6 @@ def get_estimator_spec(mode, logits, init_fn, labels, num_classes=None, params=N
   tf.identity(accuracy[1], name='train_px_accuracy')
   tf.summary.scalar('train_px_accuracy', accuracy[1])
   def compute_mean_iou(total_cm, name='mean_iou'):
-    """Compute the mean intersection-over-union via the confusion matrix."""
     sum_over_row = tf.to_float(tf.reduce_sum(total_cm, 0))
     sum_over_col = tf.to_float(tf.reduce_sum(total_cm, 1))
     cm_diag = tf.to_float(tf.diag_part(total_cm))

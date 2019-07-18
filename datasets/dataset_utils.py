@@ -268,7 +268,7 @@ def get_dataset(dataset_name,
 def get_estimator_dataset(dataset, with_label, ignore_label=255):
   def _parse_with_label_dataset(sample):
     labels = sample[LABEL]
-    sample.pop(LABEL, None)
+    # sample.pop(LABEL, None)
     return sample, labels
 
   def _parse_non_with_label_dataset(sample):

@@ -1,5 +1,4 @@
 """DeepLab v3 models based on slim library."""
-"""Reference: https://github.com/rishizek/tensorflow-deeplab-v3"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -102,7 +101,8 @@ def deeplab_v3_generator(num_classes,
                                                                                   pretrained_dir=pretrained_dir,
                                                                                   is_training=is_training,
                                                                                   weight_decay=weight_decay, 
-                                                                                  batch_norm_decay=batch_norm_decay)
+                                                                                  batch_norm_decay=batch_norm_decay,
+                                                                                  output_stride=output_stride,)
     with tf.contrib.slim.arg_scope(
       [tf.contrib.slim.conv2d],
       weights_regularizer=tf.contrib.slim.l2_regularizer(weight_decay)):
@@ -125,15 +125,14 @@ def get_deeplabv3_model_fn(num_classes,
     preprocessed_image = _preprocess(features['image'])
 
     network = deeplab_v3_generator(num_classes,
-                                  16,
+                                  params['output_stride'],
                                   frontend,
                                   pretrained_dir,
                                   _BATCH_NORM_DECAY,
                                   params['weight_decay'])
 
-    logits, init_fn = network(preprocessed_image, mode == tf.estimator.ModeKeys.TRAIN)
-    target_labels = labels if labels is not None else features['image_name']
-    return get_estimator_spec(mode, logits, init_fn, labels=target_labels, num_classes=num_classes, params=params,
-                                features=features)
+    logits, init_fn = network(preprocessed_image, (mode == tf.estimator.ModeKeys.TRAIN))
+    return get_estimator_spec(mode, logits, init_fn, labels=labels, num_classes=num_classes, params=params,
+                              features=features, )
 
   return deeplabv3_model_fn
