@@ -135,7 +135,15 @@ def _get_train_op(params, total_loss):
   tf.identity(lr, name='learning_rate')
   tf.summary.scalar('learning_rate', lr)
   optimizer = tf.train.MomentumOptimizer(learning_rate=lr, momentum=params['momentum'])
-  return optimizer.minimize(total_loss, global_step=tf.train.get_global_step())
+  if not params['freeze_batch_norm']:
+    train_var_list = [v for v in tf.trainable_variables()]
+  else:
+    train_var_list = [v for v in tf.trainable_variables()
+                      if 'beta' not in v.name and 'gamma' not in v.name]
+  update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+  with tf.control_dependencies(update_ops):
+    train_op = optimizer.minimize(total_loss, tf.train.get_global_step(), var_list=train_var_list)
+  return train_op
 
 
 # Mean pixel value.

@@ -29,6 +29,8 @@ def parse_args():
                         help='part of log dir name')
     parser.add_argument('--clean_model_dir', action='store_true',
                         help='Whether to clean up the model directory if present.')
+    parser.add_argument('--freeze_batch_norm', action='store_true',
+                        help='Whether to freeze batch norm.')
 
     # multi-gpu configs
     parser.add_argument('--num_gpus', type=int, default=1,
