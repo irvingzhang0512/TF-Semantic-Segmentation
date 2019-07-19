@@ -31,6 +31,8 @@ def parse_args():
                         help='Whether to clean up the model directory if present.')
     parser.add_argument('--freeze_batch_norm', action='store_true',
                         help='Whether to freeze batch norm.')
+    parser.add_argument('--debug_mode', action='store_true',
+                        help='Whether to use debug mode.')
 
     # multi-gpu configs
     parser.add_argument('--num_gpus', type=int, default=1,
@@ -194,9 +196,11 @@ if __name__ == '__main__':
 
                                            # model
                                            'output_stride': args.output_stride,
+                                           'freeze_batch_norm': args.freeze_batch_norm,
 
-                                           # summary
+                                           # train
                                            'summary_image_max_number': args.summary_image_max_number,
+                                           'debug_mode': args.debug_mode,
                                        })
     tensors_to_log = {
       'learning_rate': 'learning_rate',
@@ -207,8 +211,7 @@ if __name__ == '__main__':
 
     logging_hook = tf.train.LoggingTensorHook(
         tensors=tensors_to_log, every_n_iter=args.logging_every_n_steps)
-    saving_hooks = tf.train.CheckpointSaverHook('./logs/test', save_steps=100)
-    train_hooks = [logging_hook, saving_hooks]
+    train_hooks = [logging_hook]
 
     for i in range(args.epoch_start_i, args.num_epochs):
         # train
