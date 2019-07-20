@@ -1,13 +1,13 @@
-# Deeplab Dataset Utils
+# Dataset Utils
 
 [TOC]
 
 ---
 
 ## 0. Preface
-+ This package is mainly copy from [deeplab](https://github.com/tensorflow/models/tree/master/research/deeplab).
++ This package is mainly depand on [deeplab](https://github.com/tensorflow/models/tree/master/research/deeplab).
 + Target:
-  + Construct tfreocrd files for all datasets, such COCO, VOC2012, etc.
+  + Construct tfreocrd files for datasets, such Cityscapes, VOC2012, etc.
   + Construct `tf.data.Dataset` object from tfrecord files.
 
 ---
@@ -15,7 +15,7 @@
 ## 1. tfrecords
 
 ### 1.1. VOC2012
-+ script: `build_voc2012_data.py`
++ script: `deeplab_utils/build_voc2012_data.py`
 + Recommended directory structure:
 ```
 + VOCdevkit
@@ -28,8 +28,13 @@
         + segmentation_tfrecords(new directory)
 ```
 + command
-    + Step 1: under `./TF-Semantic-Segmentation` path, `python datasets/deeplab_utils/remove_gt_colormap.py --original_gt_folder {/path/to/SegmentationClass} --output_dir {/path/to/SegmentationClassRaw}`
-    + Step 2: under `./TF-Semantic-Segmentation` path, `python datasets/deeplab_utils/build_voc2012_data.py --image_format jpg`
+    + Step 1: under `./TF-Semantic-Segmentation` path, 
+```
+python datasets/deeplab_utils/remove_gt_colormap.py \
+    --original_gt_folder {/path/to/SegmentationClass} \
+    --output_dir {/path/to/SegmentationClassRaw}
+```
+  + Step 2: under `./TF-Semantic-Segmentation` path
 ```
 python datasets/deeplab_utils/build_voc2012_data.py \
     --image_format jpg \
@@ -40,20 +45,21 @@ python datasets/deeplab_utils/build_voc2012_data.py \
 ```
 
 ### 1.2. VOC2012 aug
-+ script: `build_voc2012_data.py`
++ script: `deeplab_utils/build_voc2012_data.py`
 + Recommended directory structure:
+  + SegmentationClassAug: Download from [here](https://www.dropbox.com/s/oeu149j8qtbs1x0/SegmentationClassAug.zip?dl=0)
+  + SegmentationAug: Download from [here](https://github.com/rishizek/tensorflow-deeplab-v3/tree/master/dataset), rename `train.txt` to `train_aug.txt`, move `train_aug.txt` and `val.txt` to SegmentationAug, ignore `test.txt`.
 ```
 + VOCdevkit
     + VOC2012
     + JPEGImages
-    + SegmentationClassAug(Download from https://www.dropbox.com/s/oeu149j8qtbs1x0/SegmentationClassAug.zip?dl=0)
+    + SegmentationClassAug(new directory)
     + ImageSets
-        + SegmentationAug(Download from https://github.com/rishizek/tensorflow-deeplab-v3/tree/master/dataset)
-                         (rename train.txt to train_aug.txt, move val.txt, ignore test.txt)
+        + SegmentationAug(new directory)
     + segmentation_aug_tfrecords(new directory)
 ```
 + command
-    + Step 2: under `./TF-Semantic-Segmentation` path, run the following command
+    + under `./TF-Semantic-Segmentation` path, run the following command
 ```shell
 python datasets/deeplab_utils/build_voc2012_data.py \
     --image_format jpg \
@@ -66,7 +72,7 @@ python datasets/deeplab_utils/build_voc2012_data.py \
 
 
 ### 1.3. ADE20k
-+ script: `build_ade20k_data.py`
++ script: `deeplab_utils/build_ade20k_data.py`
 + Recommended directory structure:
 ```
 + ADE20K
@@ -79,7 +85,17 @@ python datasets/deeplab_utils/build_voc2012_data.py \
             + validation
     + tfrecords(new directory)
 ```
-+ command (under `./TF-Semantic-Segmentation` path): `python datasets/deeplab_utils/build_ade20k_data.py --image_format jpg`
++ command (under `./TF-Semantic-Segmentation` path): 
+
+```
+python datasets/deeplab_utils/build_ade20k_data.py \
+    --image_format jpg \
+    --train_image_folder /path/to/train_image \
+    --train_image_label_folder /path/to/train_label \
+    --val_image_folder /path/to/val_image \
+    --val_image_label_folder /path/to/val_label \
+    --output_dir /path/to/tfrecoreds
+```
 
 
 ### 1.4. CityScapes
@@ -104,13 +120,20 @@ python datasets/deeplab_utils/build_voc2012_data.py \
     + tfrecords(new directory)
 ```
 + command:
-    + Step 1: under `./Cityscapes` path, `python ./cityscapesscripts/preparation/createTrainIdLabelImgs.py`.
-    + Step 2: under `./TF-Semantic-Segmentation` path, `python datasets/deeplab_utils/build_cityscapes_data.py`.
+  + Step 1: under `./Cityscapes` path, `python ./cityscapesscripts/preparation/createTrainIdLabelImgs.py`
+  + Step 2: under `./TF-Semantic-Segmentation` path, 
+
+```
+python datasets/deeplab_utils/build_cityscapes_data.py \
+    --cityscapes_root /path/to/cityscapes_root \
+    --output_dir /path/to/tfrecords
+```
 
 
 ---
 
 ## 2. `tf.data.Dataset`
++ python file: `dataset_utils.py`
 
 ### 2.1. Overview
 + Step 1: Parse `tf.data.TFRecordDataset`, get a python dict.
@@ -120,7 +143,7 @@ python datasets/deeplab_utils/build_voc2012_data.py \
   + Pad image and label to have dimensions >= [crop_height, crop_width]
   + Pad image with mean pixel value.
   + Randomly crop the image and label(only in training).
-  + Randomly left-right flip the image and label.
+  + Randomly left-right flip the image and label(only in training).
 + Step 3: `tf.data.Dataset` ops, such as shuffle, repeat, batch, prefetch.
 
 ### 2.2. About the `Dataset` object.
@@ -129,5 +152,5 @@ python datasets/deeplab_utils/build_voc2012_data.py \
   + We have two options to have the same image shape:
     1. original images/labels have the same shape.
     2. Crop ops(only working if `is_training` is true).
-+ Output is a python dict, with keys `'image', 'image_name', 'height', 'width', 'label'`.
++ Output is a python dict, with keys in `common.py`, such as `'image', 'image_name', 'height', 'width', 'label'`.
 

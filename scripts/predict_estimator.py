@@ -13,41 +13,28 @@ tf.logging.set_verbosity(tf.logging.INFO)
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    # multi-gpu configs
-    parser.add_argument('--gpu_devices', type=str, default="3",
-                        help='select gpus, use in "CUDA_VISIBLE_DEVICES"')
-
-    # val相关
-    parser.add_argument('--validation_step', type=int, default=1,
-                        help='How often to perform validation (epochs)')
-    parser.add_argument('--num_val_images', type=int, default=20,
-                        help='The number of images to used for validations')
-
-    # 数据集类型
-    parser.add_argument('--dataset_name', type=str, default="",
-                        help='')
-    parser.add_argument('--dataset_dir', type=str, default="",
-                        help='')    
-    parser.add_argument('--split_name', type=str, default="val", help='')
+    # base
+    parser.add_argument('--model_path', type=str, default="./logs")
+    parser.add_argument('--checkpoint_path', type=str, default=None)
+    parser.add_argument('--gpu_devices', type=str, default="3")
+    parser.add_argument('--weight_decay', type=float, default=0.00004)
     
-    # 图像预处理参数（包括图像增广）
-    parser.add_argument('--crop_height', type=int, default=512)
-    parser.add_argument('--crop_width', type=int, default=512)
+    # dataset
+    parser.add_argument('--dataset_name', type=str, default="")
+    parser.add_argument('--dataset_dir', type=str, default="")
+    parser.add_argument('--split_name', type=str, default="val")
+    parser.add_argument('--crop_height', type=int, default=513)
+    parser.add_argument('--crop_width', type=int, default=513)
+    parser.add_argument('--num_readers', type=int, default=4)
 
+    # model
+    parser.add_argument('--model', type=str, default="DeepLabV3")
+    parser.add_argument('--frontend', type=str, default="ResNet101")
+    parser.add_argument('--output_stride', type=int, default=16,)
 
-    # 模型相关参数
-    parser.add_argument('--model', type=str, default="Encoder-Decoder",
-                        help='The model you are using. See model_estimator_builder.py for supported models')
-    parser.add_argument('--frontend', type=str, default="ResNet101",
-                        help='The frontend you are using. See frontend_builder.py for supported models')
+    # output
+    parser.add_argument('--target_path', type=str, default="./output")
 
-    # pre-trained model 相关参数
-    parser.add_argument('--target_path', type=str, default="./results",
-                        help='path to save target pics.')
-    parser.add_argument('--model_path', type=str, default="./ckpt",
-                        help='path that saves all ckpt files.')
-    parser.add_argument('--checkpoint_path', type=str, default=None,
-                        help='ckpt files path.')
 
     return parser.parse_args()
 

@@ -9,24 +9,30 @@ tf.logging.set_verbosity(tf.logging.INFO)
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    # 训练基本参数
+    # base
     parser.add_argument('--model_path', type=str, default="./logs")
     parser.add_argument('--checkpoint_path', type=str, default=None)
+    parser.add_argument('--gpu_devices', type=str, default="3")
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--weight_decay', type=float, default=0.00004)
-    parser.add_argument('--gpu_devices', type=str, default="3")
 
-    # 数据
+    # debug mode
+    parser.add_argument('--debug_mode', action='store_true',
+                        help='Whether to use debug mode.')
+
+    # dataset
     parser.add_argument('--dataset_name', type=str, default="")
-    parser.add_argument('--dataset_dir', type=str, default="")    
+    parser.add_argument('--dataset_dir', type=str, default="")
     parser.add_argument('--split_name', type=str, default="val")
     parser.add_argument('--crop_height', type=int, default=513)
     parser.add_argument('--crop_width', type=int, default=513)
     parser.add_argument('--num_readers', type=int, default=4)
 
-    # 模型相关参数
+    # model
     parser.add_argument('--model', type=str, default="DeepLabV3")
     parser.add_argument('--frontend', type=str, default="ResNet101")
+    parser.add_argument('--output_stride', type=int, default=16,
+                        help='')
 
     return parser.parse_args()
 
@@ -34,9 +40,8 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_devices
-    dataset_meta = dataset_builder.build_dataset_meta(args.dataset_name)
 
-    
+    dataset_meta = dataset_builder.build_dataset_meta(args.dataset_name)
     def _val_input_fn():
         dataset_configs = dataset_builder.build_dataset_configs(
             dataset_dir=args.dataset_dir, 
@@ -56,6 +61,15 @@ if __name__ == '__main__':
                                                                                        pretrained_dir=None),
                                        model_dir=args.model_path,
                                        config=tf.estimator.RunConfig(session_config=session_config),
-                                       params={'weight_decay': args.weight_decay}
+                                       params={
+                                           'weight_decay': args.weight_decay,
+
+                                           # model
+                                           'output_stride': args.output_stride,
+
+                                           # debug mode
+                                           'batch_size': args.batch_size,
+                                           'dataset_name': args.dataset_name,
+                                        }
                                     )
-    estimator.evaluate(_val_input_fn, args.num_val_images, checkpoint_path=args.checkpoint_path)
+    estimator.evaluate(_val_input_fn, checkpoint_path=args.checkpoint_path)

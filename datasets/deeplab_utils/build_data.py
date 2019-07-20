@@ -32,6 +32,7 @@ The Example proto contains the following fields:
 import collections
 import six
 import tensorflow as tf
+from datasets import common
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -147,15 +148,15 @@ def image_seg_to_tfexample(image_data, filename, height, width, seg_data):
     tf example of one image/segmentation pair.
   """
   return tf.train.Example(features=tf.train.Features(feature={
-      'image/encoded': _bytes_list_feature(image_data),
-      'image/filename': _bytes_list_feature(filename),
-      'image/format': _bytes_list_feature(
+      common.TF_RECORD_IMAGE_ENCODED: _bytes_list_feature(image_data),
+      common.TF_RECORD_IMAGE_FILENAME: _bytes_list_feature(filename),
+      common.TF_RECORD_IMAGE_FORMAT: _bytes_list_feature(
           _IMAGE_FORMAT_MAP[FLAGS.image_format]),
-      'image/height': _int64_list_feature(height),
-      'image/width': _int64_list_feature(width),
-      'image/channels': _int64_list_feature(3),
-      'image/segmentation/class/encoded': (
+      common.TF_RECORD_IMAGE_HEIGHT: _int64_list_feature(height),
+      common.TF_RECORD_IMAGE_WIDTH: _int64_list_feature(width),
+      common.TF_RECORD_IMAGE_CHANNELS: _int64_list_feature(3),
+      common.TF_RECORD_IMAGE_SEGMENTATION_CLASS_ENCODED: (
           _bytes_list_feature(seg_data)),
-      'image/segmentation/class/format': _bytes_list_feature(
+      common.TF_RECORD_IMAGE_SEGMENTATION_CLASS_FORMAT: _bytes_list_feature(
           FLAGS.label_format),
   }))

@@ -13,12 +13,16 @@ tf.logging.set_verbosity(tf.logging.INFO)
 def parse_args():
     parser = argparse.ArgumentParser()
     
-    # training
+    # base configs
     parser.add_argument('--batch_size', type=int, default=8,
                         help='Number of images in each batch per gpu. '
                              'If there are multiple gpus, tf.data will get batch_size * num_gpus.')
     parser.add_argument('--weight_decay', type=float, default=0.00004,
                         help='l2 loss.')
+    parser.add_argument('--debug_mode', action='store_true',
+                        help='Whether to use debug mode.')
+    
+    # training
     parser.add_argument('--num_epochs', type=int, default=300,
                         help='Number of epochs to train for')
     parser.add_argument('--epoch_start_i', type=int, default=0,
@@ -31,8 +35,6 @@ def parse_args():
                         help='Whether to clean up the model directory if present.')
     parser.add_argument('--freeze_batch_norm', action='store_true',
                         help='Whether to freeze batch norm.')
-    parser.add_argument('--debug_mode', action='store_true',
-                        help='Whether to use debug mode.')
 
     # multi-gpu configs
     parser.add_argument('--num_gpus', type=int, default=1,
@@ -167,7 +169,6 @@ if __name__ == '__main__':
                                        model_dir=logs_path,
                                        config=tf.estimator.RunConfig(
                                            save_checkpoints_steps=args.saving_every_n_steps,
-                                        #    log_step_count_steps=args.logging_every_n_steps,
                                            save_summary_steps=args.summary_every_n_steps,
                                            train_distribute=strategy,
                                            session_config=session_config,
@@ -189,17 +190,15 @@ if __name__ == '__main__':
 
                                            # base
                                            'weight_decay': args.weight_decay,
-                                           'batch_size': args.batch_size,
-
-                                           # dataset
-                                           'dataset_name': args.dataset_name,
 
                                            # model
                                            'output_stride': args.output_stride,
                                            'freeze_batch_norm': args.freeze_batch_norm,
 
-                                           # train
-                                           'summary_image_max_number': args.summary_image_max_number,
+                                           # debug mode
+                                           'batch_size': args.batch_size,
+                                           'dataset_name': args.dataset_name,
+                                           'summary_image_max_number': args.summary_image_max_number, # only in training procedure
                                            'debug_mode': args.debug_mode,
                                        })
     tensors_to_log = {

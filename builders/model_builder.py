@@ -7,7 +7,6 @@ from models.FRRN import build_frrn
 from models.MobileUNet import build_mobile_unet
 from models.PSPNet import build_pspnet
 from models.GCN import build_gcn
-from models.DeepLabV3 import build_deeplabv3
 from models.DeepLabV3_plus import build_deeplabv3_plus
 from models.AdapNet import build_adaptnet
 from models.custom_model import build_custom
@@ -78,10 +77,6 @@ def build_model(model_name, net_input, num_classes, crop_width, crop_height, fro
         # GCN requires pre-trained ResNet weights
         network, init_fn = build_gcn(net_input, preset_model=model_name, frontend=frontend, num_classes=num_classes,
                                      is_training=is_training)
-    elif model_name == "DeepLabV3":
-        # DeepLabV requires pre-trained ResNet weights
-        network, init_fn = build_deeplabv3(net_input, preset_model=model_name, frontend=frontend,
-                                           num_classes=num_classes, is_training=is_training)
     elif model_name == "DeepLabV3_plus":
         # DeepLabV3+ requires pre-trained ResNet weights
         network, init_fn = build_deeplabv3_plus(net_input, preset_model=model_name, frontend=frontend,

@@ -17,7 +17,7 @@ def get_estimator_spec(mode, logits, init_fn, labels, num_classes=None, params=N
       'logits': logits,
   }
 
-  if params['debug_mode']:
+  if params.get('debug_mode'):
     dataset_name = params['dataset_name']
     cur_labels = labels if mode != tf.estimator.ModeKeys.PREDICT else kwargs['features'].get('label')
     gt_color_labels = None
