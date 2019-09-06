@@ -23,7 +23,7 @@ python scripts/train_estimator.py \
     --val_split_name="val" \
     --num_epochs=46 \
     --epoch_start_i=0 \
-    --batch_size=10 \
+    --batch_size=5 \
     --num_gpus=1 \
     --dataset_name="pascal_voc_seg" \
     --dataset_dir="/ssd/zhangyiyang/data/VOCdevkit/segmentation_aug_tfrecords" \
@@ -35,16 +35,17 @@ python scripts/train_estimator.py \
     --max_scale_factor=2. \
     --scale_factor_step_size=0.25 \
     --model="DeepLabV3" \
-    --saving_every_n_steps=1000 \
-    --logging_every_n_steps=50 \
-    --summary_every_n_steps=50 \
+    --saving_every_n_steps=2000 \
+    --logging_every_n_steps=100 \
+    --summary_every_n_steps=100 \
     --num_val_images=1449 \
     --base_learning_rate=7e-3 \
-    --end_learning_rate=1e-6 \
-    --training_number_of_steps=30000 \
+    --end_learning_rate=1e-5 \
+    --training_number_of_steps=60000 \
     --weight_decay=1e-4 \
-    --gpu_devices="3" \
-    --logs_name 1
+    --gpu_devices="2" \
+    --output_stride=8 \
+    --logs_name 4
 ```
 + cityscapes
 ```shell

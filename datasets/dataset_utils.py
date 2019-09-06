@@ -140,7 +140,7 @@ def get_dataset(dataset_name,
 
       label.set_shape([None, None, 1])
 
-      sample[LABELS_CLASS] = label
+      sample[common.LABELS_CLASS] = label
 
     return sample
 
