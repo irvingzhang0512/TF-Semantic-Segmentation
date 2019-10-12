@@ -1,6 +1,6 @@
 import collections
 import tensorflow as tf
-from .backends import xception_deeplab
+from ..backends import xception_deeplab
 
 BackendDescriptor = collections.namedtuple(
     'DatasetDescriptor',
@@ -54,5 +54,5 @@ def build_backend(backend_type, input_shape=(None, None, 3), OS=16):
         return xception_deeplab.Xception(
             input_shape=input_shape,
             OS=OS,
-        )
+        ), BACKEND_INFORMATION[backend_type].preprocess_fn
     raise ValueError('unknown backend type {}'.format(backend_type))

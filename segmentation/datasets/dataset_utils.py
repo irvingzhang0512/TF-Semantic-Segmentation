@@ -1,7 +1,7 @@
 import os
 import tensorflow as tf
 from .deeplab_utils import input_preprocess
-import common
+from . import common
 
 
 __all__ = ['get_dataset', 'get_estimator_dataset']
@@ -113,8 +113,10 @@ def get_dataset(dataset_name,
         label = None
         if split_name != common.TEST_SET:
             label = _decode_image(
-                parsed_features[common.TF_RECORD_IMAGE_SEGMENTATION_CLASS_ENCODED],
-                channels=1)
+                parsed_features[
+                    common.TF_RECORD_IMAGE_SEGMENTATION_CLASS_ENCODED],
+                channels=1
+            )
 
         image_name = parsed_features[common.TF_RECORD_IMAGE_FILENAME]
         if image_name is None:
@@ -157,20 +159,21 @@ def get_dataset(dataset_name,
         image = sample[common.IMAGE]
         label = sample[common.LABELS_CLASS]
 
-        original_image, image, label = input_preprocess.preprocess_image_and_label(
-            image=image,
-            label=label,
-            crop_height=crop_size[0],
-            crop_width=crop_size[1],
-            min_resize_value=min_resize_value,
-            max_resize_value=max_resize_value,
-            resize_factor=resize_factor,
-            min_scale_factor=min_scale_factor,
-            max_scale_factor=max_scale_factor,
-            scale_factor_step_size=scale_factor_step_size,
-            ignore_label=ignore_label,
-            is_training=is_training,
-            model_variant=model_variant)
+        original_image, image, label = \
+            input_preprocess.preprocess_image_and_label(
+                image=image,
+                label=label,
+                crop_height=crop_size[0],
+                crop_width=crop_size[1],
+                min_resize_value=min_resize_value,
+                max_resize_value=max_resize_value,
+                resize_factor=resize_factor,
+                min_scale_factor=min_scale_factor,
+                max_scale_factor=max_scale_factor,
+                scale_factor_step_size=scale_factor_step_size,
+                ignore_label=ignore_label,
+                is_training=is_training,
+                model_variant=model_variant)
 
         sample[common.IMAGE] = image
 
@@ -207,10 +210,10 @@ def get_dataset(dataset_name,
 def get_estimator_dataset(dataset, with_label, ignore_label=255):
     def _parse_with_label_dataset(sample):
         labels = sample[common.LABEL]
-        return sample, labels
+        return sample[common.IMAGE], labels
 
     def _parse_non_with_label_dataset(sample):
-        return sample
+        return sample[common.IMAGE]
 
     if with_label:
         _parse_dataset = _parse_with_label_dataset
