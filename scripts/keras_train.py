@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import argparse
 import tensorflow as tf
@@ -26,10 +27,8 @@ def parse_args():
                         help='Whether to clean up the model dir if present.')
 
     # multi-gpu configs
-    parser.add_argument('--num_gpus', type=int, default=1,
-                        help='num of gpus')
-    parser.add_argument('--gpu_devices', type=str, default="3",
-                        help='select gpus, use in "CUDA_VISIBLE_DEVICES"')
+    parser.add_argument('--num_gpus', type=int, default=1)
+    parser.add_argument('--gpu_devices', type=str, default="3")
 
     # learning rate
     parser.add_argument('--learning_policy',
@@ -63,23 +62,12 @@ def parse_args():
                         type=float, default=1e-4,
                         help='The number of steps used for training')
 
-    # optimizer
-    parser.add_argument('--momentum', type=float, default=0.9,
-                        help='The momentum value to use')
-    parser.add_argument('--use_adam', action='store_true')
-
-    # val related
-    parser.add_argument('--validation_step', type=int, default=1,
-                        help='How often to perform validation (epochs)')
-
     # dataset
-    parser.add_argument('--dataset_name', type=str, default="",
-                        help='')
-    parser.add_argument('--dataset_dir', type=str, default="",
-                        help='')
-    parser.add_argument('--train_split_name', type=str,
-                        default="train", help='')
+    parser.add_argument('--dataset_name', type=str, default="", help='')
+    parser.add_argument('--dataset_dir', type=str, default="", help='')
+    parser.add_argument('--train_split_name', type=str, default="", help='')
     parser.add_argument('--val_split_name', type=str, default="val", help='')
+    parser.add_argument('--num_readers', type=int, default=4)
 
     # image preprocessing and argument
     parser.add_argument('--train_crop_height', type=int, default=513)
@@ -92,23 +80,15 @@ def parse_args():
     parser.add_argument('--min_scale_factor', type=float, default=.5)
     parser.add_argument('--max_scale_factor', type=float, default=2.)
     parser.add_argument('--scale_factor_step_size', type=float, default=0.25)
-    parser.add_argument('--num_readers', type=int, default=4)
 
     # model related
-    parser.add_argument('--model_type', type=str, default="deeplab_v3_plus",
-                        help='')
-    parser.add_argument('--backend_type', type=str, default="xception",
-                        help='')
-    parser.add_argument('--model_weights', type=str, default=None,
-                        help='')
-    parser.add_argument('--output_stride', type=int, default=16,
-                        help='')
+    parser.add_argument('--model_type', type=str, default="", help='')
+    parser.add_argument('--backend_type', type=str, default="", help='')
+    parser.add_argument('--model_weights', type=str, default=None, help='')
+    parser.add_argument('--output_stride', type=int, default=16, help='')
 
-    # save, log, summary
-    parser.add_argument('--saving_every_n_steps', type=int, default=200,
-                        help='')
-    parser.add_argument('--summary_every_n_steps', type=int, default=20,
-                        help='')
+    # summary
+    parser.add_argument('--summary_every_n_steps', type=int, default=100)
 
     return parser.parse_args()
 
@@ -128,6 +108,7 @@ def _get_datasets(args):
         num_readers=args.num_readers,
         should_shuffle=True,
         is_training=True,
+        should_repeat=True,
     )
     train_dataset = dataset_builder.build_dataset(
         args.dataset_name, args.train_split_name, True, train_dataset_configs)
@@ -150,7 +131,7 @@ def _get_model_dir_name(args):
     # save logs in  `./{logs_root_path}/logs-{datasets}-{model}-{logs_name}`
     return os.path.join(
         args.logs_root_path, 'logs-{}-{}-{}'.format(args.dataset_name,
-                                                    args.model,
+                                                    args.model_type,
                                                     args.logs_name))
 
 
@@ -170,8 +151,9 @@ if __name__ == '__main__':
         model_type=args.model_type,
         backend_type=args.backend_type,
         weights=args.model_weights,
+        num_classes=dataset_meta.num_classes,
         OS=args.output_stride,
-        input_shape=(None, None, 3),
+        input_shape=(args.train_crop_height, args.train_crop_width, 3),
     )
 
     if args.num_gpus > 1:
@@ -180,24 +162,34 @@ if __name__ == '__main__':
             gpus=args.num_gpus,
         )
 
-    # TODO: optimizer
     keras_model.compile(
-        optimizer='',
+        optimizer=tf.keras.optimizers.Adam(),
         loss=losses_utils.cross_entropy_loss,
         metrics=[metrics_utils.accuracy, metrics_utils.mean_iou],
     )
 
-    # TODO: tensorboard, learning rate, saving
-    callbacks = []
+    # TODO: learning rate, saving
+    callbacks = [
+        tf.keras.callbacks.TensorBoard(
+            model_dir,
+            update_freq=args.summary_every_n_steps,
+        ),
+        tf.keras.callbacks.EarlyStopping(
+            restore_best_weights=True,
+            patience=5,
+        ),
+    ]
 
+    # training
     keras_model.fit(
         train_dataset,
         epochs=args.epochs,
         initial_epoch=args.initial_epoch,
-        # TODO
-        steps_per_epoch=int(100),
+        steps_per_epoch=int(np.ceil(
+            1.0*dataset_meta.splits_to_sizes[
+                args.train_split_name
+            ]/args.batch_size/args.num_gpus)),
         validation_data=val_dataset,
-        # TODO
-        validation_steps=int(100),
+        validation_steps=dataset_meta.splits_to_sizes[args.val_split_name],
         callbacks=callbacks,
     )

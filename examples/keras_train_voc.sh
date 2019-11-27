@@ -1,0 +1,23 @@
+python ./scripts/keras_train.py --num_gpus 1 \
+                                --gpu_devices 3 \
+                                --batch_size 8 \
+                                --weight_decay 0.00004 \
+                                --epochs 300 \
+                                --initial_epoch 0 \
+                                --dataset_name pascal_voc_seg \
+                                --dataset_dir /hdd02/zhangyiyang/data/VOCdevkit/segmentation_aug_tfrecords \
+                                --train_split_name train_aug \
+                                --val_split_name val \
+                                --train_crop_height 513 \
+                                --train_crop_width 513 \
+                                --eval_crop_height 513 \
+                                --eval_crop_width 513 \
+                                --min_scale_factor 0.5 \
+                                --max_scale_factor 2.0 \
+                                --scale_factor_step_size 0.25 \
+                                --num_readers 4 \
+                                --model_type deeplab_v3_plus \
+                                --backend_type xception \
+                                --output_stride 16 \
+                                --clean_model_dir \
+                                --logs_name default
