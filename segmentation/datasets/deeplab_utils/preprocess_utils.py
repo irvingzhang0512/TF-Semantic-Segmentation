@@ -41,14 +41,14 @@ def flip_dim(tensor_list, prob=0.5, dim=1):
       ValueError: If dim is negative or greater than the dimension of
         a `Tensor`.
     """
-    random_value = tf.random_uniform([])
+    random_value = tf.random.uniform([])
 
     def flip():
         flipped = []
         for tensor in tensor_list:
             if dim < 0 or dim >= len(tensor.get_shape().as_list()):
                 raise ValueError('dim must represent a valid dimension.')
-            flipped.append(tf.reverse_v2(tensor, [dim]))
+            flipped.append(tf.reverse(tensor, [dim]))
         return flipped
 
     is_flipped = tf.less_equal(random_value, prob)
@@ -106,7 +106,7 @@ def pad_to_bounding_box(image, offset_height, offset_width, target_height,
       ValueError: If the shape of image is incompatible with the offset_* or
       target_* arguments.
     """
-    with tf.name_scope(None, 'pad_to_bounding_box', [image]):
+    with tf.compat.v1.name_scope(None, 'pad_to_bounding_box', [image]):
         image = tf.convert_to_tensor(image, name='image')
         original_dtype = image.dtype
         if original_dtype != tf.float32 and original_dtype != tf.float64:
@@ -203,7 +203,7 @@ def _crop(image, offset_height, offset_width, crop_height, crop_width):
             tf.greater_equal(original_shape[1], crop_width)),
         ['Crop size greater than the image size.'])
 
-    offsets = tf.to_int32(tf.stack([offset_height, offset_width, 0]))
+    offsets = tf.cast(tf.stack([offset_height, offset_width, 0]), tf.int32)
 
     # Use tf.slice instead of crop_to_bounding box as it accepts tensors to
     # define the crop size.
@@ -287,9 +287,9 @@ def random_crop(image_list, crop_height, crop_width):
     with tf.control_dependencies(asserts):
         max_offset_height = tf.reshape(image_height - crop_height + 1, [])
         max_offset_width = tf.reshape(image_width - crop_width + 1, [])
-    offset_height = tf.random_uniform(
+    offset_height = tf.random.uniform(
         [], maxval=max_offset_height, dtype=tf.int32)
-    offset_width = tf.random_uniform(
+    offset_width = tf.random.uniform(
         [], maxval=max_offset_width, dtype=tf.int32)
 
     return [_crop(image, offset_height, offset_width,
@@ -318,15 +318,15 @@ def get_random_scale(min_scale_factor, max_scale_factor, step_size):
 
     # When step_size = 0, we sample the value uniformly from [min, max).
     if step_size == 0:
-        return tf.random_uniform([1],
+        return tf.random.uniform([1],
                                  minval=min_scale_factor,
                                  maxval=max_scale_factor)
 
     # When step_size != 0
     # we randomly select one discrete value from [min, max].
     num_steps = int((max_scale_factor - min_scale_factor) / step_size + 1)
-    scale_factors = tf.lin_space(min_scale_factor, max_scale_factor, num_steps)
-    shuffled_scale_factors = tf.random_shuffle(scale_factors)
+    scale_factors = tf.linspace(min_scale_factor, max_scale_factor, num_steps)
+    shuffled_scale_factors = tf.random.shuffle(scale_factors)
     return shuffled_scale_factors[0]
 
 
@@ -351,14 +351,16 @@ def randomly_scale_image_and_label(image, label=None, scale=1.0):
 
     # Need squeeze and expand_dims because image interpolation takes
     # 4D tensors as input.
-    image = tf.squeeze(tf.image.resize_bilinear(
+    image = tf.squeeze(tf.compat.v1.image.resize(
         tf.expand_dims(image, 0),
         new_dim,
+        method=tf.image.ResizeMethod.BILINEAR,
         align_corners=True), [0])
     if label is not None:
-        label = tf.squeeze(tf.image.resize_nearest_neighbor(
+        label = tf.squeeze(tf.compat.v1.image.resize(
             tf.expand_dims(label, 0),
             new_dim,
+            method=tf.image.ResizeMethod.NEAREST_NEIGHBOR,
             align_corners=True), [0])
 
     return image, label
@@ -378,7 +380,7 @@ def resolve_shape(tensor, rank=None, scope=None):
     Returns:
       shape: The full shape of the tensor.
     """
-    with tf.name_scope(scope, 'resolve_shape', [tensor]):
+    with tf.compat.v1.name_scope(scope, 'resolve_shape', [tensor]):
         if rank is not None:
             shape = tensor.get_shape().with_rank(rank).as_list()
         else:
@@ -438,7 +440,7 @@ def resize_to_range(image,
     Raises:
       ValueError: If the image is not a 3D tensor.
     """
-    with tf.name_scope(scope, 'resize_to_range', [image]):
+    with tf.compat.v1.name_scope(scope, 'resize_to_range', [image]):
         new_tensor_list = []
         min_size = tf.cast(min_size, tf.float32)
         if max_size is not None:
@@ -458,8 +460,8 @@ def resize_to_range(image,
 
         # Calculate the larger of the possible sizes
         large_scale_factor = min_size / orig_min_size
-        large_height = tf.to_int32(tf.ceil(orig_height * large_scale_factor))
-        large_width = tf.to_int32(tf.ceil(orig_width * large_scale_factor))
+        large_height = tf.cast(tf.ceil(orig_height * large_scale_factor), tf.int32)
+        large_width = tf.cast(tf.ceil(orig_width * large_scale_factor), tf.int32)
         large_size = tf.stack([large_height, large_width])
 
         new_size = large_size
@@ -468,9 +470,9 @@ def resize_to_range(image,
             # larger is too big.
             orig_max_size = tf.maximum(orig_height, orig_width)
             small_scale_factor = max_size / orig_max_size
-            small_height = tf.to_int32(
-                tf.ceil(orig_height * small_scale_factor))
-            small_width = tf.to_int32(tf.ceil(orig_width * small_scale_factor))
+            small_height = tf.cast(
+                tf.ceil(orig_height * small_scale_factor), tf.int32)
+            small_width = tf.cast(tf.ceil(orig_width * small_scale_factor), tf.int32)
             small_size = tf.stack([small_height, small_width])
             new_size = tf.cond(
                 tf.cast(tf.reduce_max(large_size), tf.float32) > max_size,
@@ -479,18 +481,18 @@ def resize_to_range(image,
         # Ensure that both output sides are multiples of factor plus one.
         if factor is not None:
             new_size += (factor - (new_size - 1) % factor) % factor
-        new_tensor_list.append(tf.image.resize_images(
+        new_tensor_list.append(tf.compat.v1.image.resize_images(
             image, new_size, method=method, align_corners=align_corners))
         if label is not None:
             if label_layout_is_chw:
                 # Input label has shape [channel, height, width].
                 resized_label = tf.expand_dims(label, 3)
-                resized_label = tf.image.resize_nearest_neighbor(
+                resized_label = tf.compat.v1.image.resize_nearest_neighbor(
                     resized_label, new_size, align_corners=align_corners)
                 resized_label = tf.squeeze(resized_label, 3)
             else:
                 # Input label has shape [height, width, channel].
-                resized_label = tf.image.resize_images(
+                resized_label = tf.compat.v1.image.resize_images(
                     label, new_size,
                     method=tf.image.ResizeMethod.NEAREST_NEIGHBOR,
                     align_corners=align_corners)

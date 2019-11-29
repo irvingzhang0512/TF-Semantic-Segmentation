@@ -20,7 +20,7 @@ def _get_all_files(dataset_dir, split_name):
     file_pattern = _FILE_PATTERN
     file_pattern = os.path.join(dataset_dir,
                                 file_pattern % split_name)
-    return tf.gfile.Glob(file_pattern)
+    return tf.io.gfile.glob(file_pattern)
 
 
 def get_dataset(dataset_name,
@@ -90,22 +90,22 @@ def get_dataset(dataset_name,
 
         features = {
             common.TF_RECORD_IMAGE_ENCODED:
-                tf.FixedLenFeature((), tf.string, default_value=''),
+                tf.io.FixedLenFeature((), tf.string, default_value=''),
             common.TF_RECORD_IMAGE_FILENAME:
-                tf.FixedLenFeature((), tf.string, default_value=''),
+                tf.io.FixedLenFeature((), tf.string, default_value=''),
             common.TF_RECORD_IMAGE_FORMAT:
-                tf.FixedLenFeature((), tf.string, default_value='jpeg'),
+                tf.io.FixedLenFeature((), tf.string, default_value='jpeg'),
             common.TF_RECORD_IMAGE_HEIGHT:
-                tf.FixedLenFeature((), tf.int64, default_value=0),
+                tf.io.FixedLenFeature((), tf.int64, default_value=0),
             common.TF_RECORD_IMAGE_WIDTH:
-                tf.FixedLenFeature((), tf.int64, default_value=0),
+                tf.io.FixedLenFeature((), tf.int64, default_value=0),
             common.TF_RECORD_IMAGE_SEGMENTATION_CLASS_ENCODED:
-                tf.FixedLenFeature((), tf.string, default_value=''),
+                tf.io.FixedLenFeature((), tf.string, default_value=''),
             common.TF_RECORD_IMAGE_SEGMENTATION_CLASS_FORMAT:
-                tf.FixedLenFeature((), tf.string, default_value='png'),
+                tf.io.FixedLenFeature((), tf.string, default_value='png'),
         }
 
-        parsed_features = tf.parse_single_example(example_proto, features)
+        parsed_features = tf.io.parse_single_example(example_proto, features)
 
         image = _decode_image(
             parsed_features[common.TF_RECORD_IMAGE_ENCODED], channels=3)

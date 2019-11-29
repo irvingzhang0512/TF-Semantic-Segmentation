@@ -4,11 +4,11 @@ from tensorflow.python.keras.utils.data_utils import get_file
 from ..builders import backend_builder
 
 WEIGHTS_PATH_X = (
-    "https: // github.com/bonlime/keras-deeplab-v3-plus/releases/download"
+    "https://github.com/bonlime/keras-deeplab-v3-plus/releases/download"
     "/1.1/deeplabv3_xception_tf_dim_ordering_tf_kernels.h5"
 )
 WEIGHTS_PATH_MOBILE = (
-    "https: // github.com/bonlime/keras-deeplab-v3-plus/releases/download"
+    "https://github.com/bonlime/keras-deeplab-v3-plus/releases/download"
     "/1.1/deeplabv3_mobilenetv2_tf_dim_ordering_tf_kernels.h5"
 )
 WEIGHTS_PATH_X_CS = (
@@ -42,7 +42,10 @@ def _aspp(x, OS, backend_type):
     b4 = layers.Activation('relu')(b4)
     # upsample. have to use compat because of the option align_corners
     size_before = tf.keras.backend.int_shape(x)
-    b4 = layers.Lambda(lambda x: tf.image.resize(x, size_before[1:3],
+    b4 = layers.Lambda(lambda x:
+                       tf.compat.v1.image.resize(x,
+                                                 size_before[1:3],
+                                                 method='bilinear',
                                                  align_corners=True))(b4)
     # simple 1x1
     b0 = layers.Conv2D(256, (1, 1), padding='same',
@@ -84,9 +87,11 @@ def _deeplab_v3_plus_decoder(x, skip, img_shape, backend_type,
     if backend_type == 'xception':
         # Feature projection
         # x4 (x2) block
-        x = layers.Lambda(lambda xx: tf.image.resize(x,
-                                                     skip.shape[1:3],
-                                                     align_corners=True))(x)
+        x = layers.Lambda(lambda xx:
+                          tf.compat.v1.image.resize(x,
+                                                    skip.shape[1:3],
+                                                    method='bilinear',
+                                                    align_corners=True))(x)
 
         dec_skip1 = layers.Conv2D(48, (1, 1), padding='same',
                                   use_bias=False,
@@ -109,9 +114,11 @@ def _deeplab_v3_plus_decoder(x, skip, img_shape, backend_type,
 
     x = layers.Conv2D(num_classes, (1, 1),
                       padding='same', name=last_layer_name)(x)
-    x = layers.Lambda(lambda xx: tf.image.resize(xx,
-                                                 img_shape[0:2],
-                                                 align_corners=True))(x)
+    x = layers.Lambda(lambda xx:
+                      tf.compat.v1.image.resize(xx,
+                                                img_shape[0:2],
+                                                method='bilinear',
+                                                align_corners=True))(x)
 
     if activation in {'softmax', 'sigmoid'}:
         x = tf.keras.layers.Activation(activation)(x)
@@ -139,6 +146,7 @@ def DeepLabV3Plus(backend_type='xception',
         name='preprocess_fn',
     )(input_tensor)
     extractor_output, skip = backend(preprocessed_tensor)
+
     aspp_output = _aspp(
         x=extractor_output,
         OS=OS,
@@ -167,6 +175,8 @@ def DeepLabV3Plus(backend_type='xception',
                 WEIGHTS_PATH_X,
                 cache_subdir='models'
             )
+            model.get_layer('xception').load_weights(
+                weights_path, by_name=True)
         model.load_weights(weights_path, by_name=True)
     elif weights == 'cityscapes':
         if backend_type == 'xception':

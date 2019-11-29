@@ -5,7 +5,6 @@ import tensorflow as tf
 from segmentation.builders import model_builder, dataset_builder
 from segmentation.utils import losses_utils, metrics_utils
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-tf.logging.set_verbosity(tf.logging.INFO)
 
 
 def parse_args():
@@ -120,6 +119,7 @@ def _get_datasets(args):
         crop_size=(args.eval_crop_height, args.eval_crop_width),
         should_shuffle=False,
         is_training=False,
+        should_repeat=True,
     )
     val_dataset = dataset_builder.build_dataset(
         args.dataset_name, args.val_split_name, True, val_dataset_configs)
@@ -138,6 +138,14 @@ def _get_model_dir_name(args):
 if __name__ == '__main__':
     args = parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_devices
+
+    if tf.__version__.split('.')[0] == "1":
+        tf.logging.set_verbosity(tf.logging.INFO)
+        tf_config = tf.ConfigProto()
+        tf_config.gpu_options.allow_growth = True  # 不一定全部占满显存, 按需分配
+        sess = tf.Session(config=tf_config)
+        tf.keras.backend.set_session(sess)
+
     dataset_meta = dataset_builder.build_dataset_meta(args.dataset_name)
 
     train_dataset, val_dataset = _get_datasets(args)
@@ -163,7 +171,7 @@ if __name__ == '__main__':
         )
 
     keras_model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
+        optimizer=tf.keras.optimizers.Adam(lr=1e-3),
         loss=losses_utils.cross_entropy_loss,
         metrics=[metrics_utils.accuracy, metrics_utils.mean_iou],
     )
@@ -176,8 +184,12 @@ if __name__ == '__main__':
         ),
         tf.keras.callbacks.EarlyStopping(
             restore_best_weights=True,
-            patience=5,
+            patience=10,
         ),
+        # tf.keras.callbacks.ModelCheckpoint(
+        #     os.path.join(model_dir, 'weights.{epoch:02d}-{val_loss:.2f}.hdf5'),
+        #     save_weights_only=True,
+        # ),
     ]
 
     # training
