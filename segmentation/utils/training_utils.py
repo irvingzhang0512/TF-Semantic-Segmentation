@@ -61,3 +61,41 @@ def get_learning_rate(learning_policy,
 
     return tf.where(global_step < slow_start_step,
                     adjusted_slow_start_learning_rate, learning_rate)
+
+
+def get_keras_learning_rate_fn(learning_policy,
+                               base_learning_rate,
+
+                               # exponential_decay
+                               learning_rate_decay_step,
+                               learning_rate_decay_factor,
+
+                               # polynomial_decay
+                               training_number_of_steps,
+                               learning_power,
+                               end_learning_rate,
+
+                               # piecewise_constant_decay
+                               learning_rate_boundaries,
+                               learning_rate_values,):
+    if learning_policy == 'step':
+        return tf.keras.optimizers.schedules.ExponentialDecay(
+            initial_learning_rate=base_learning_rate,
+            decay_steps=learning_rate_decay_step,
+            decay_rate=learning_rate_decay_factor,
+            staircase=True,
+        )
+    elif learning_policy == 'poly':
+        return tf.keras.optimizers.schedules.PolynomialDecay(
+            initial_learning_rate=base_learning_rate,
+            decay_steps=training_number_of_steps,
+            end_learning_rate=end_learning_rate,
+            power=learning_power,
+        )
+    elif learning_policy == 'piecewise':
+        return tf.keras.optimizers.schedules.PiecewiseConstantDecay(
+            boundaries=learning_rate_boundaries,
+            values=learning_rate_values,
+        )
+    else:
+        return base_learning_rate

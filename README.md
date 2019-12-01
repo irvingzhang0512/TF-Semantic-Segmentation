@@ -25,20 +25,22 @@
 ## 2. TODO
 
 ### 2.1. Datasets
-+ [ ] 
-+ [ ] CamVid.
-+ [ ] More Datasets.
++ [x] Pascal VOC Augmentation
++ [ ] Cityscaptes
++ [ ] ADE20k
++ [ ] CamVid
++ [ ] More Datasets
 
 ### 2.2. Models
-+ [ ] DeepLabV3
-+ [ ] DeepLabV3+
-+ [ ] get `tf.keras` Model.
++ [x] DeepLabV3+
++ [ ] fine_tune_batch_norm
++ [ ] l2 loss
 
 
 ### 2.2. example
-+ [ ] train script.
-+ [ ] show dataset jupyter.
-+ [ ] evaluation script.
++ [x] train script.
++ [x] show dataset jupyter.
++ [x] evaluation script.
 + [ ] predict script.
 + [ ] train jupyter.
 + [ ] val jupyter.
@@ -47,4 +49,4 @@
 ## 3. Quick Start
 + Step 1: generate tfrecord files for datasets, following <a href='datasets/README.md'>this doc</a>.
 + Step 2: run scripts in `scripts`.
-  + <a href='g3doc/deeplabv3.md'>g3doc/deeplabv3.md</a> provide DeepLabV3 training commands and results
+  + In `examples` dir, there are some training/evaluating scripts.

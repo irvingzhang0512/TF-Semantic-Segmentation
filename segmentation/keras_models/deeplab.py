@@ -45,7 +45,6 @@ def _aspp(x, OS, backend_type):
     b4 = layers.Lambda(lambda x:
                        tf.compat.v1.image.resize(x,
                                                  size_before[1:3],
-                                                 method='bilinear',
                                                  align_corners=True))(b4)
     # simple 1x1
     b0 = layers.Conv2D(256, (1, 1), padding='same',
@@ -90,7 +89,6 @@ def _deeplab_v3_plus_decoder(x, skip, img_shape, backend_type,
         x = layers.Lambda(lambda xx:
                           tf.compat.v1.image.resize(x,
                                                     skip.shape[1:3],
-                                                    method='bilinear',
                                                     align_corners=True))(x)
 
         dec_skip1 = layers.Conv2D(48, (1, 1), padding='same',
@@ -117,7 +115,6 @@ def _deeplab_v3_plus_decoder(x, skip, img_shape, backend_type,
     x = layers.Lambda(lambda xx:
                       tf.compat.v1.image.resize(xx,
                                                 img_shape[0:2],
-                                                method='bilinear',
                                                 align_corners=True))(x)
 
     if activation in {'softmax', 'sigmoid'}:
@@ -185,5 +182,7 @@ def DeepLabV3Plus(backend_type='xception',
                 WEIGHTS_PATH_X_CS,
                 cache_subdir='models'
             )
+            model.get_layer('xception').load_weights(
+                weights_path, by_name=True)
         model.load_weights(weights_path, by_name=True)
     return model

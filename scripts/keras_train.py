@@ -3,7 +3,8 @@ import os
 import argparse
 import tensorflow as tf
 from segmentation.builders import model_builder, dataset_builder
-from segmentation.utils import losses_utils, metrics_utils
+from segmentation.utils import losses_utils, metrics_utils, \
+    training_utils
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 
 
@@ -45,21 +46,14 @@ def parse_args():
     parser.add_argument('--learning_power',
                         type=float, default=0.9, help='polynomial_decay')
     parser.add_argument('--end_learning_rate',
-                        type=float, default=1e-5, help='polynomial_decay')
+                        type=float, default=.0, help='polynomial_decay')
     parser.add_argument('--training_number_of_steps',
-                        type=int, default=10700*15, help='polynomial_decay')
+                        type=int, default=30000, help='polynomial_decay')
 
     parser.add_argument('--learning_rate_boundaries',
                         nargs='+', type=int, help='piecewise_constant_decay')
     parser.add_argument('--learning_rate_values',
                         nargs='+', type=float, help='piecewise_constant_decay')
-
-    parser.add_argument('--slow_start_step',
-                        type=int, default=0,
-                        help='The number of steps used for training')
-    parser.add_argument('--slow_start_learning_rate',
-                        type=float, default=1e-4,
-                        help='The number of steps used for training')
 
     # dataset
     parser.add_argument('--dataset_name', type=str, default="", help='')
@@ -170,13 +164,34 @@ if __name__ == '__main__':
             gpus=args.num_gpus,
         )
 
+    learning_rate_fn = training_utils.get_keras_learning_rate_fn(
+        learning_policy=args.learning_policy,
+
+        # for exponential decay and polynomial decay
+        base_learning_rate=args.base_learning_rate,
+
+        # exponential_decay
+        learning_rate_decay_step=args.learning_rate_decay_step,
+        learning_rate_decay_factor=args.learning_rate_decay_factor,
+
+        # polynomial_decay
+        training_number_of_steps=args.training_number_of_steps,
+        learning_power=args.learning_power,
+        end_learning_rate=args.end_learning_rate,
+
+        # piecewise_constant_decay
+        learning_rate_boundaries=args.learning_rate_boundaries,
+        learning_rate_values=args.learning_rate_values,
+    )
+
     keras_model.compile(
-        optimizer=tf.keras.optimizers.Adam(lr=1e-3),
+        optimizer=tf.keras.optimizers.RMSprop(
+            learning_rate=learning_rate_fn
+        ),
         loss=losses_utils.cross_entropy_loss,
         metrics=[metrics_utils.accuracy, metrics_utils.mean_iou],
     )
 
-    # TODO: learning rate, saving
     callbacks = [
         tf.keras.callbacks.TensorBoard(
             model_dir,
@@ -186,10 +201,10 @@ if __name__ == '__main__':
             restore_best_weights=True,
             patience=10,
         ),
-        # tf.keras.callbacks.ModelCheckpoint(
-        #     os.path.join(model_dir, 'weights.{epoch:02d}-{val_loss:.2f}.hdf5'),
-        #     save_weights_only=True,
-        # ),
+        tf.keras.callbacks.ModelCheckpoint(
+            os.path.join(model_dir, 'weights.{epoch:02d}-{val_loss:.2f}.hdf5'),
+            save_weights_only=True,
+        ),
     ]
 
     # training
