@@ -33,7 +33,7 @@
 
 ### 2.2. Models
 + [x] DeepLabV3+
-+ [ ] fine_tune_batch_norm
++ [x] fine_tune_batch_norm
 + [ ] l2 loss
 
 

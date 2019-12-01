@@ -24,7 +24,8 @@ WEIGHTS_PATH_MOBILE_CS = (
 layers = tf.keras.layers
 
 
-def _aspp(x, OS, backend_type):
+def _aspp(x, OS, backend_type,
+          fine_tune_batch_norm=False,):
     # branching for Atrous Spatial Pyramid Pooling
     if OS == 8:
         atrous_rates = (12, 24, 36)
@@ -38,7 +39,10 @@ def _aspp(x, OS, backend_type):
     b4 = layers.Lambda(lambda x: tf.expand_dims(x, 1))(b4)
     b4 = layers.Conv2D(256, (1, 1), padding='same',
                        use_bias=False, name='image_pooling')(b4)
-    b4 = layers.BatchNormalization(name='image_pooling_BN', epsilon=1e-5)(b4)
+    b4 = layers.BatchNormalization(
+        name='image_pooling_BN',
+        epsilon=1e-5,
+        trainable=fine_tune_batch_norm,)(b4)
     b4 = layers.Activation('relu')(b4)
     # upsample. have to use compat because of the option align_corners
     size_before = tf.keras.backend.int_shape(x)
@@ -49,7 +53,10 @@ def _aspp(x, OS, backend_type):
     # simple 1x1
     b0 = layers.Conv2D(256, (1, 1), padding='same',
                        use_bias=False, name='aspp0')(x)
-    b0 = layers.BatchNormalization(name='aspp0_BN', epsilon=1e-5)(b0)
+    b0 = layers.BatchNormalization(
+        name='aspp0_BN',
+        epsilon=1e-5,
+        trainable=fine_tune_batch_norm,)(b0)
     b0 = layers.Activation('relu', name='aspp0_activation')(b0)
 
     # there are only 2 branches in mobilenetV2. not sure why
@@ -57,15 +64,18 @@ def _aspp(x, OS, backend_type):
         # rate = 6 (12)
         b1 = SepConv_BN(x, 256, 'aspp1',
                         rate=atrous_rates[0],
-                        depth_activation=True, epsilon=1e-5)
+                        depth_activation=True, epsilon=1e-5,
+                        fine_tune_batch_norm=fine_tune_batch_norm,)
         # rate = 12 (24)
         b2 = SepConv_BN(x, 256, 'aspp2',
                         rate=atrous_rates[1],
-                        depth_activation=True, epsilon=1e-5)
+                        depth_activation=True, epsilon=1e-5,
+                        fine_tune_batch_norm=fine_tune_batch_norm,)
         # rate = 18 (36)
         b3 = SepConv_BN(x, 256, 'aspp3',
                         rate=atrous_rates[2],
-                        depth_activation=True, epsilon=1e-5)
+                        depth_activation=True, epsilon=1e-5,
+                        fine_tune_batch_norm=fine_tune_batch_norm,)
 
         # concatenate ASPP branches & project
         x = layers.Concatenate()([b4, b0, b1, b2, b3])
@@ -74,7 +84,10 @@ def _aspp(x, OS, backend_type):
 
     x = layers.Conv2D(256, (1, 1), padding='same',
                       use_bias=False, name='concat_projection')(x)
-    x = layers.BatchNormalization(name='concat_projection_BN', epsilon=1e-5)(x)
+    x = layers.BatchNormalization(
+        name='concat_projection_BN',
+        epsilon=1e-5,
+        trainable=fine_tune_batch_norm,)(x)
     x = layers.Activation('relu')(x)
     x = layers.Dropout(0.1)(x)
 
@@ -82,7 +95,8 @@ def _aspp(x, OS, backend_type):
 
 
 def _deeplab_v3_plus_decoder(x, skip, img_shape, backend_type,
-                             weights, num_classes, activation):
+                             weights, num_classes, activation,
+                             fine_tune_batch_norm=False,):
     if backend_type == 'xception':
         # Feature projection
         # x4 (x2) block
@@ -95,13 +109,17 @@ def _deeplab_v3_plus_decoder(x, skip, img_shape, backend_type,
                                   use_bias=False,
                                   name='feature_projection0')(skip)
         dec_skip1 = layers.BatchNormalization(
-            name='feature_projection0_BN', epsilon=1e-5)(dec_skip1)
+            name='feature_projection0_BN',
+            epsilon=1e-5,
+            trainable=fine_tune_batch_norm,)(dec_skip1)
         dec_skip1 = layers.Activation('relu')(dec_skip1)
         x = layers.Concatenate()([x, dec_skip1])
         x = SepConv_BN(x, 256, 'decoder_conv0',
-                       depth_activation=True, epsilon=1e-5)
+                       depth_activation=True, epsilon=1e-5,
+                       fine_tune_batch_norm=fine_tune_batch_norm,)
         x = SepConv_BN(x, 256, 'decoder_conv1',
-                       depth_activation=True, epsilon=1e-5)
+                       depth_activation=True, epsilon=1e-5,
+                       fine_tune_batch_norm=fine_tune_batch_norm,)
 
     # you can use it with arbitary number of classes
     if (weights == 'pascal_voc' and num_classes == 21) or \
@@ -127,13 +145,15 @@ def DeepLabV3Plus(backend_type='xception',
                   weights=None,
                   num_classes=21,
                   activation=None,
-                  input_shape=(512, 512, 3),
+                  input_shape=(513, 513, 3),
                   OS=16,
+                  fine_tune_batch_norm=False,
                   ):
     backend, preprocess_fn = backend_builder.build_backend(
         backend_type=backend_type,
         input_shape=input_shape,
         OS=OS,
+        fine_tune_batch_norm=fine_tune_batch_norm,
     )
     input_tensor = layers.Input(input_shape)
     preprocessed_tensor = layers.Lambda(
@@ -148,6 +168,7 @@ def DeepLabV3Plus(backend_type='xception',
         x=extractor_output,
         OS=OS,
         backend_type=backend_type,
+        fine_tune_batch_norm=fine_tune_batch_norm,
     )
     final_output = _deeplab_v3_plus_decoder(
         x=aspp_output,
@@ -157,6 +178,7 @@ def DeepLabV3Plus(backend_type='xception',
         weights=weights,
         num_classes=num_classes,
         activation=activation,
+        fine_tune_batch_norm=fine_tune_batch_norm,
     )
     model = tf.keras.Model(
         input_tensor,

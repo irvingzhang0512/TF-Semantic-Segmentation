@@ -25,6 +25,8 @@ def parse_args():
     parser.add_argument('--backend_type', type=str, default="", help='')
     parser.add_argument('--model_weights', type=str, default=None, help='')
     parser.add_argument('--output_stride', type=int, default=16, help='')
+    parser.add_argument('--fine_tune_batch_norm', action='store_true',
+                        help='Whether to fine tune bach norm.')
 
     return parser.parse_args()
 
@@ -65,6 +67,7 @@ if __name__ == '__main__':
         num_classes=dataset_meta.num_classes,
         OS=args.output_stride,
         input_shape=(args.eval_crop_height, args.eval_crop_width, 3),
+        fine_tune_batch_norm=args.fine_tune_batch_norm,
     )
 
     if args.num_gpus > 1:

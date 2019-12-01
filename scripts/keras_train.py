@@ -37,19 +37,16 @@ def parse_args():
     parser.add_argument('--base_learning_rate',
                         type=float, default=1e-3,
                         help='used in [poly, step, piecewise]')
-
     parser.add_argument('--learning_rate_decay_factor',
                         type=float, default=0.1, help='exponential_decay')
     parser.add_argument('--learning_rate_decay_step',
                         type=int, default=2000, help='exponential_decay')
-
     parser.add_argument('--learning_power',
                         type=float, default=0.9, help='polynomial_decay')
     parser.add_argument('--end_learning_rate',
                         type=float, default=.0, help='polynomial_decay')
     parser.add_argument('--training_number_of_steps',
                         type=int, default=30000, help='polynomial_decay')
-
     parser.add_argument('--learning_rate_boundaries',
                         nargs='+', type=int, help='piecewise_constant_decay')
     parser.add_argument('--learning_rate_values',
@@ -79,6 +76,8 @@ def parse_args():
     parser.add_argument('--backend_type', type=str, default="", help='')
     parser.add_argument('--model_weights', type=str, default=None, help='')
     parser.add_argument('--output_stride', type=int, default=16, help='')
+    parser.add_argument('--fine_tune_batch_norm', action='store_true',
+                        help='Whether to fine tune bach norm.')
 
     # summary
     parser.add_argument('--summary_every_n_steps', type=int, default=100)
@@ -156,6 +155,7 @@ if __name__ == '__main__':
         num_classes=dataset_meta.num_classes,
         OS=args.output_stride,
         input_shape=(args.train_crop_height, args.train_crop_width, 3),
+        fine_tune_batch_norm=args.fine_tune_batch_norm,
     )
 
     if args.num_gpus > 1:

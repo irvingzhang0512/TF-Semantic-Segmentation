@@ -49,7 +49,10 @@ BACKEND_INFORMATION = {
 }
 
 
-def build_backend(backend_type, input_shape=(None, None, 3), OS=16):
+def build_backend(backend_type,
+                  input_shape=(513, 513, 3),
+                  OS=16,
+                  fine_tune_batch_norm=False,):
     if backend_type == 'xception':
         return xception_deeplab.Xception(
             input_shape=input_shape,
