@@ -47,6 +47,6 @@
 
 
 ## 3. Quick Start
-+ Step 1: generate tfrecord files for datasets, following <a href='datasets/README.md'>this doc</a>.
++ Step 1: generate tfrecord files for datasets, following <a href='segmentation/datasets/README.md'>this doc</a>.
 + Step 2: run scripts in `scripts`.
   + In `examples` dir, there are some training/evaluating scripts.
