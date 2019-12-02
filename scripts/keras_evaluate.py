@@ -19,12 +19,15 @@ def parse_args():
     parser.add_argument('--split_name', type=str, default="val", help='')
     parser.add_argument('--eval_crop_height', type=int, default=513)
     parser.add_argument('--eval_crop_width', type=int, default=513)
+    parser.add_argument('--min_resize_value', type=int, default=None)
+    parser.add_argument('--max_resize_value', type=int, default=None)
 
     # model related
-    parser.add_argument('--model_type', type=str, default="", help='')
-    parser.add_argument('--backend_type', type=str, default="", help='')
-    parser.add_argument('--model_weights', type=str, default=None, help='')
-    parser.add_argument('--output_stride', type=int, default=16, help='')
+    parser.add_argument('--model_type', type=str, default="")
+    parser.add_argument('--backend_type', type=str, default="")
+    parser.add_argument('--model_weights', type=str, default=None)
+    parser.add_argument('--model_weights_path', type=str, default=None)
+    parser.add_argument('--output_stride', type=int, default=16)
     parser.add_argument('--fine_tune_batch_norm', action='store_true',
                         help='Whether to fine tune bach norm.')
 
@@ -36,6 +39,8 @@ def _get_datasets(args):
         dataset_dir=args.dataset_dir,
         batch_size=1,
         crop_size=(args.eval_crop_height, args.eval_crop_width),
+        min_resize_value=args.min_resize_value,
+        max_resize_value=args.max_resize_value,
         should_shuffle=False,
         is_training=False,
         should_repeat=True,
@@ -60,15 +65,25 @@ if __name__ == '__main__':
     dataset_meta = dataset_builder.build_dataset_meta(args.dataset_name)
     val_dataset = _get_datasets(args)
 
+    model_weights = None
+    if args.model_weights_path is None:
+        model_weights = args.model_weights
+
     keras_model = model_builder.build_model(
         model_type=args.model_type,
         backend_type=args.backend_type,
-        weights=args.model_weights,
+        weights=model_weights,
         num_classes=dataset_meta.num_classes,
         OS=args.output_stride,
         input_shape=(args.eval_crop_height, args.eval_crop_width, 3),
         fine_tune_batch_norm=args.fine_tune_batch_norm,
     )
+
+    if args.model_weights_path is not None:
+        keras_model.load_weights(
+            args.model_weights_path,
+            by_name=True,
+        )
 
     if args.num_gpus > 1:
         keras_model = tf.keras.utils.multi_gpu_model(
@@ -77,9 +92,14 @@ if __name__ == '__main__':
         )
 
     keras_model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
-        loss=losses_utils.cross_entropy_loss,
-        metrics=[metrics_utils.accuracy, metrics_utils.mean_iou],
+        optimizer=tf.keras.optimizers.SGD(),
+        loss=losses_utils.build_cross_entropy_loss_fn(
+            num_classes=dataset_meta.num_classes
+        ),
+        metrics=[
+            metrics_utils.build_accuracy_fn(dataset_meta.num_classes),
+            metrics_utils.build_mean_iou_fn(dataset_meta.num_classes)
+        ],
     )
 
     # evaluate

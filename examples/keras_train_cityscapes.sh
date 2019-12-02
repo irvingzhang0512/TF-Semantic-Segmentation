@@ -1,16 +1,18 @@
-# https://github.com/tensorflow/models/blob/master/research/deeplab/g3doc/pascal.md
+# https://github.com/tensorflow/models/blob/master/research/deeplab/g3doc/cityscapes.md
 python ./scripts/keras_train.py --num_gpus 1 \
-                                --gpu_devices 3 \
-                                --batch_size 8 \
+                                --gpu_devices 1 \
+                                --batch_size 4 \
                                 --weight_decay 0.00004 \
                                 --epochs 300 \
                                 --initial_epoch 0 \
-                                --dataset_name pascal_voc_seg \
-                                --dataset_dir /hdd02/zhangyiyang/data/VOCdevkit/segmentation_aug_tfrecords \
-                                --train_split_name train_aug \
+                                --dataset_name cityscapes \
+                                --dataset_dir /hdd02/zhangyiyang/data/Cityscapes/tfrecords \
+                                --train_split_name train \
                                 --val_split_name val \
-                                --crop_height 513 \
-                                --crop_width 513 \
+                                --max_resize_value 769 \
+                                --min_resize_value 769 \
+                                --crop_height 769 \
+                                --crop_width 769 \
                                 --min_scale_factor 0.5 \
                                 --max_scale_factor 2.0 \
                                 --scale_factor_step_size 0.25 \
@@ -19,8 +21,9 @@ python ./scripts/keras_train.py --num_gpus 1 \
                                 --base_learning_rate 1e-4 \
                                 --learning_power 0.9 \
                                 --end_learning_rate 0. \
-                                --training_number_of_steps 30000 \
+                                --training_number_of_steps 90000 \
                                 --model_type deeplab_v3_plus \
+                                --model_weights pascal_voc \
                                 --backend_type xception \
                                 --output_stride 16 \
                                 --clean_model_dir \

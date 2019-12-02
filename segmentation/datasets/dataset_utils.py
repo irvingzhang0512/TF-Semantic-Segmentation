@@ -195,6 +195,9 @@ def get_dataset(dataset_name,
         .map(_parse_function, num_parallel_calls=num_readers)
         .map(_preprocess_image, num_parallel_calls=num_readers))
 
+    # # overfit on one sample
+    # dataset = dataset.take(1)
+
     if should_shuffle:
         dataset = dataset.shuffle(buffer_size=100)
 

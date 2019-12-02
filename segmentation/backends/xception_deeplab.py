@@ -41,14 +41,14 @@ def SepConv_BN(x, filters, prefix,
                                name=prefix + '_depthwise')(x)
     x = layers.BatchNormalization(
         name=prefix + '_depthwise_BN', epsilon=epsilon,
-        fine_tune_batch_norm=fine_tune_batch_norm,)(x)
+        trainable=fine_tune_batch_norm,)(x)
     if depth_activation:
         x = layers.Activation('relu')(x)
     x = layers.Conv2D(filters, (1, 1), padding='same',
                       use_bias=False, name=prefix + '_pointwise')(x)
     x = layers.BatchNormalization(
         name=prefix + '_pointwise_BN', epsilon=epsilon,
-        fine_tune_batch_norm=fine_tune_batch_norm,)(x)
+        trainable=fine_tune_batch_norm,)(x)
     if depth_activation:
         x = layers.Activation('relu')(x)
 
@@ -121,7 +121,7 @@ def _xception_block(inputs, depth_list, prefix, skip_connection_type, stride,
                                 stride=stride)
         shortcut = layers.BatchNormalization(
             name=prefix + '_shortcut_BN',
-            fine_tune_batch_norm=fine_tune_batch_norm,)(shortcut)
+            trainable=fine_tune_batch_norm,)(shortcut)
         outputs = layers.add([residual, shortcut])
     elif skip_connection_type == 'sum':
         outputs = layers.add([residual, inputs])
@@ -159,13 +159,13 @@ def Xception(input_tensor=None,
                       use_bias=False, padding='same')(img_input)
     x = layers.BatchNormalization(
         name='entry_flow_conv1_1_BN',
-        fine_tune_batch_norm=fine_tune_batch_norm,)(x)
+        trainable=fine_tune_batch_norm,)(x)
     x = layers.Activation('relu')(x)
 
     x = _conv2d_same(x, 64, 'entry_flow_conv1_2', kernel_size=3, stride=1)
     x = layers.BatchNormalization(
         name='entry_flow_conv1_2_BN',
-        fine_tune_batch_norm=fine_tune_batch_norm,)(x)
+        trainable=fine_tune_batch_norm,)(x)
     x = layers.Activation('relu')(x)
 
     x = _xception_block(x, [128, 128, 128], 'entry_flow_block1',

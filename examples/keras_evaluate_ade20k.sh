@@ -1,8 +1,10 @@
 python ./scripts/keras_evaluate.py --num_gpus 1 \
                                    --gpu_devices 1 \
-                                   --dataset_name pascal_voc_seg \
-                                   --dataset_dir /hdd02/zhangyiyang/data/VOCdevkit/segmentation_aug_tfrecords \
+                                   --dataset_name ade20k \
+                                   --dataset_dir /hdd02/zhangyiyang/data/ADE20K/tfrecord \
                                    --split_name val \
+                                   --max_resize_value 513 \
+                                   --min_resize_value 513 \
                                    --eval_crop_height 513 \
                                    --eval_crop_width 513 \
                                    --model_type deeplab_v3_plus \

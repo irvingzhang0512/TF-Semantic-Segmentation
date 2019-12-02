@@ -14,6 +14,9 @@
   + Project Structure.
 + [tensorflow/models/research/deeplab](https://github.com/tensorflow/models/tree/master/research/deeplab)
   + TFRecord utils & Image preprocessing & Data Argument
+  + Training params.
++ [bonlime/keras-deeplab-v3-plus](https://github.com/bonlime/keras-deeplab-v3-plus)
+  + DeepLab V3+ Model architecture.
 
 ## 1. Targets
 + generate tfrecord files for several open source semantic segmentation datasets.
@@ -26,24 +29,25 @@
 
 ### 2.1. Datasets
 + [x] Pascal VOC Augmentation
-+ [ ] Cityscaptes
-+ [ ] ADE20k
++ [x] Cityscaptes
++ [x] ADE20k
 + [ ] CamVid
-+ [ ] More Datasets
++ More Datasets
 
 ### 2.2. Models
 + [x] DeepLabV3+
 + [x] fine_tune_batch_norm
-+ [ ] l2 loss
++ [x] l2 loss
 
 
 ### 2.2. example
-+ [x] train script.
-+ [x] show dataset jupyter.
-+ [x] evaluation script.
-+ [ ] predict script.
-+ [ ] train jupyter.
-+ [ ] val jupyter.
++ scripts
+  + [x] train script.
+  + [x] evaluation script.
+  + [ ] predict script.
++ jupyter
+  + [x] show dataset.
+  + [x] overfit on one sample jupyter.
 
 
 ## 3. Quick Start
