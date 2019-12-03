@@ -1,4 +1,4 @@
-from ..keras_models import deeplab
+from ..keras_models import deeplab, deeplab_v2
 
 
 def build_model(model_type='deeplab_v3_plus',
@@ -12,6 +12,16 @@ def build_model(model_type='deeplab_v3_plus',
                 ):
     if model_type == 'deeplab_v3_plus':
         return deeplab.DeepLabV3Plus(
+            backend_type=backend_type,
+            weights=weights,
+            num_classes=num_classes,
+            activation=activation,
+            input_shape=input_shape,
+            OS=OS,
+            fine_tune_batch_norm=fine_tune_batch_norm,
+        )
+    if model_type == 'deeplab_v3_plus_v2':
+        return deeplab_v2.DeepLabV3Plus(
             backend_type=backend_type,
             weights=weights,
             num_classes=num_classes,

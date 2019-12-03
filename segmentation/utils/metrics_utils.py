@@ -53,7 +53,7 @@ def build_mean_iou_fn(num_classes=21):
                 tf.reduce_sum(total_cm, 0), tf.float32)
             sum_over_col = tf.cast(
                 tf.reduce_sum(total_cm, 1), tf.float32)
-            cm_diag = tf.cast(tf.diag_part(total_cm), tf.float32)
+            cm_diag = tf.cast(tf.linalg.tensor_diag_part(total_cm), tf.float32)
             denominator = sum_over_row + sum_over_col - cm_diag
 
             # The mean is only computed over classes that appear in the
@@ -68,7 +68,7 @@ def build_mean_iou_fn(num_classes=21):
             denominator = tf.where(
                 tf.greater(denominator, 0), denominator,
                 tf.ones_like(denominator))
-            iou = tf.div(cm_diag, denominator)
+            iou = tf.math.divide(cm_diag, denominator)
 
             # If the number of valid entries is 0 (no classes) we return 0.
             result = tf.where(

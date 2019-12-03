@@ -1,27 +1,63 @@
+import logging
 import tensorflow as tf
 from ..backends.xception_deeplab import SepConv_BN
-from tensorflow.python.keras.utils.data_utils import get_file
 from ..builders import backend_builder
+from ..utils.pretrained_utils import load_pretrained_weights
 
-WEIGHTS_PATH_X = (
-    "https://github.com/bonlime/keras-deeplab-v3-plus/releases/download"
-    "/1.1/deeplabv3_xception_tf_dim_ordering_tf_kernels.h5"
-)
-WEIGHTS_PATH_MOBILE = (
-    "https://github.com/bonlime/keras-deeplab-v3-plus/releases/download"
-    "/1.1/deeplabv3_mobilenetv2_tf_dim_ordering_tf_kernels.h5"
-)
-WEIGHTS_PATH_X_CS = (
-    "https://github.com/bonlime/keras-deeplab-v3-plus/releases/download"
-    "/1.2/deeplabv3_xception_tf_dim_ordering_tf_kernels_cityscapes.h5"
-)
-WEIGHTS_PATH_MOBILE_CS = (
-    "https://github.com/bonlime/keras-deeplab-v3-plus/releases/download"
-    "/1.2/deeplabv3_mobilenetv2_tf_dim_ordering_tf_kernels_cityscapes.h5"
-)
-
+logger = logging.getLogger('tensorflow')
 
 layers = tf.keras.layers
+
+
+class BilinearUpsampling(layers.Layer):
+    """Just a simple bilinear upsampling layer. Works only with TF.
+       Args:
+           upsampling: tuple of 2 numbers > 0. The upsampling ratio for h and w
+           output_size: used instead of upsampling arg if passed!
+    """
+
+    def __init__(self, upsampling=(2, 2), output_size=None, **kwargs):
+
+        super(BilinearUpsampling, self).__init__(**kwargs)
+
+        if output_size:
+            self.upsample_size = output_size
+            self.upsampling = None
+        else:
+            self.upsampling = upsampling
+
+    def compute_output_shape(self, input_shape):
+        if self.upsampling:
+            height = self.upsampling[0] * \
+                input_shape[1] if input_shape[1] is not None else None
+            width = self.upsampling[1] * \
+                input_shape[2] if input_shape[2] is not None else None
+        else:
+            height = self.upsample_size[0]
+            width = self.upsample_size[1]
+        return (input_shape[0],
+                height,
+                width,
+                input_shape[3])
+
+    def call(self, inputs):
+        if self.upsampling:
+            return tf.compat.v1.image.resize_bilinear(
+                inputs,
+                (inputs.shape[1] * self.upsampling[0],
+                 inputs.shape[2] * self.upsampling[1]),
+                align_corners=True,)
+        else:
+            return tf.compat.v1.image.resize_bilinear(
+                inputs,
+                (self.upsample_size[0], self.upsample_size[1]),
+                align_corners=True,)
+
+    def get_config(self):
+        config = {'upsampling': self.upsampling,
+                  'upsample_size': self.upsample_size}
+        base_config = super(BilinearUpsampling, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 def _aspp(x, OS, backend_type,
@@ -46,10 +82,7 @@ def _aspp(x, OS, backend_type,
     b4 = layers.Activation('relu')(b4)
     # upsample. have to use compat because of the option align_corners
     size_before = tf.keras.backend.int_shape(x)
-    b4 = layers.Lambda(lambda x:
-                       tf.compat.v1.image.resize(x,
-                                                 size_before[1:3],
-                                                 align_corners=True))(b4)
+    b4 = BilinearUpsampling(output_size=size_before[1:3])(b4)
     # simple 1x1
     b0 = layers.Conv2D(256, (1, 1), padding='same',
                        use_bias=False, name='aspp0')(x)
@@ -100,10 +133,7 @@ def _deeplab_v3_plus_decoder(x, skip, img_shape, backend_type,
     if backend_type == 'xception':
         # Feature projection
         # x4 (x2) block
-        x = layers.Lambda(lambda xx:
-                          tf.compat.v1.image.resize(x,
-                                                    skip.shape[1:3],
-                                                    align_corners=True))(x)
+        x = BilinearUpsampling(output_size=skip.shape[1:3])(x)
 
         dec_skip1 = layers.Conv2D(48, (1, 1), padding='same',
                                   use_bias=False,
@@ -114,6 +144,7 @@ def _deeplab_v3_plus_decoder(x, skip, img_shape, backend_type,
             trainable=fine_tune_batch_norm,)(dec_skip1)
         dec_skip1 = layers.Activation('relu')(dec_skip1)
         x = layers.Concatenate()([x, dec_skip1])
+
         x = SepConv_BN(x, 256, 'decoder_conv0',
                        depth_activation=True, epsilon=1e-5,
                        fine_tune_batch_norm=fine_tune_batch_norm,)
@@ -130,10 +161,7 @@ def _deeplab_v3_plus_decoder(x, skip, img_shape, backend_type,
 
     x = layers.Conv2D(num_classes, (1, 1),
                       padding='same', name=last_layer_name)(x)
-    x = layers.Lambda(lambda xx:
-                      tf.compat.v1.image.resize(xx,
-                                                img_shape[0:2],
-                                                align_corners=True))(x)
+    x = BilinearUpsampling(output_size=img_shape[0:2])(x)
 
     if activation in {'softmax', 'sigmoid'}:
         x = tf.keras.layers.Activation(activation)(x)
@@ -149,19 +177,24 @@ def DeepLabV3Plus(backend_type='xception',
                   OS=16,
                   fine_tune_batch_norm=False,
                   ):
-    backend, preprocess_fn = backend_builder.build_backend(
+    preprocess_fn = backend_builder.build_preprocess_fn(backend_type)
+    backend = backend_builder.build_backend(
         backend_type=backend_type,
         input_shape=input_shape,
         OS=OS,
         fine_tune_batch_norm=fine_tune_batch_norm,
     )
+
     input_tensor = layers.Input(input_shape)
+
     preprocessed_tensor = layers.Lambda(
         lambda xx: preprocess_fn(xx),
         output_shape=input_shape,
         trainable=False,
         name='preprocess_fn',
     )(input_tensor)
+
+    # (33, 33, 1024), (129, 129, 256)
     extractor_output, skip = backend(preprocessed_tensor)
 
     aspp_output = _aspp(
@@ -170,6 +203,7 @@ def DeepLabV3Plus(backend_type='xception',
         backend_type=backend_type,
         fine_tune_batch_norm=fine_tune_batch_norm,
     )
+
     final_output = _deeplab_v3_plus_decoder(
         x=aspp_output,
         skip=skip,
@@ -180,31 +214,14 @@ def DeepLabV3Plus(backend_type='xception',
         activation=activation,
         fine_tune_batch_norm=fine_tune_batch_norm,
     )
+
     model = tf.keras.Model(
         input_tensor,
         final_output,
         name='deeplab_v3_plus',
     )
 
-    # load weights
-    if weights == 'pascal_voc':
-        if backend_type == 'xception':
-            weights_path = get_file(
-                'deeplabv3_xception_tf_dim_ordering_tf_kernels.h5',
-                WEIGHTS_PATH_X,
-                cache_subdir='models'
-            )
-            model.get_layer('xception').load_weights(
-                weights_path, by_name=True)
-        model.load_weights(weights_path, by_name=True)
-    elif weights == 'cityscapes':
-        if backend_type == 'xception':
-            weights_path = get_file(
-                'deeplabv3_xception_tf_dim_ordering_tf_kernels_cityscapes.h5',
-                WEIGHTS_PATH_X_CS,
-                cache_subdir='models'
-            )
-            model.get_layer('xception').load_weights(
-                weights_path, by_name=True)
-        model.load_weights(weights_path, by_name=True)
+    if weights is not None:
+        load_pretrained_weights(model, weights, backend_type)
+
     return model

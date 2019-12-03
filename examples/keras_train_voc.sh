@@ -22,6 +22,7 @@ python ./scripts/keras_train.py --num_gpus 1 \
                                 --training_number_of_steps 30000 \
                                 --model_type deeplab_v3_plus \
                                 --backend_type xception \
+                                --model_weights pascal_voc \
                                 --output_stride 16 \
                                 --clean_model_dir \
                                 --logs_name default

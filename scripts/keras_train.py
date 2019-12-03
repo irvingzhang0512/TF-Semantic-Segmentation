@@ -6,6 +6,7 @@ from segmentation.builders import model_builder, dataset_builder
 from segmentation.utils import losses_utils, metrics_utils, \
     training_utils
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
+tf.keras.backend.set_learning_phase(True)
 
 
 def parse_args():
@@ -15,6 +16,8 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=8,
                         help='Number of images in each batch per gpu. ')
     parser.add_argument('--weight_decay', type=float, default=0.00004)
+    parser.add_argument('--early_stopping_epochs', type=int, default=100)
+    parser.add_argument('--ckpt', type=str, default=None)
 
     # training
     parser.add_argument('--epochs', type=int, default=300)
@@ -106,7 +109,7 @@ def _get_datasets(args):
     # val dataset
     val_dataset_configs = dataset_builder.build_dataset_configs(
         dataset_dir=args.dataset_dir,
-        batch_size=1,
+        batch_size=args.batch_size,
         crop_size=(args.crop_height, args.crop_width),
         min_resize_value=args.min_resize_value,
         max_resize_value=args.max_resize_value,
@@ -127,10 +130,11 @@ def _get_model_dir_name(args):
         lr = args.base_learning_rate
     return os.path.join(
         args.logs_root_path,
-        'logs-{}-{}_{}-lr_{}_{}-{}'.format(
+        'logs-{}-{}_{}-lr_{}_{}-wd{}-{}'.format(
             args.dataset_name,  # dataset
             args.model_type, args.backend_type,  # model
             args.learning_policy, lr,  # learning rate
+            args.weight_decay,  # l2 loss
             args.logs_name,))  # others
 
 
@@ -154,15 +158,23 @@ if __name__ == '__main__':
         import shutil
         shutil.rmtree(model_dir, ignore_errors=True)
 
+    if args.ckpt is not None:
+        model_weights = None
+    else:
+        model_weights = args.model_weights
+
     keras_model = model_builder.build_model(
         model_type=args.model_type,
         backend_type=args.backend_type,
-        weights=args.model_weights,
+        weights=model_weights,
         num_classes=dataset_meta.num_classes,
         OS=args.output_stride,
         input_shape=(args.crop_height, args.crop_width, 3),
         fine_tune_batch_norm=args.fine_tune_batch_norm,
     )
+
+    if args.ckpt is not None:
+        keras_model.load_weights(args.ckpt)
 
     if args.num_gpus > 1:
         keras_model = tf.keras.utils.multi_gpu_model(
@@ -191,7 +203,7 @@ if __name__ == '__main__':
     )
 
     keras_model.compile(
-        optimizer=tf.keras.optimizers.SGD(
+        optimizer=tf.keras.optimizers.Adam(
             learning_rate=learning_rate_fn
         ),
         loss=losses_utils.build_total_loss_fn(
@@ -212,7 +224,7 @@ if __name__ == '__main__':
         ),
         tf.keras.callbacks.EarlyStopping(
             restore_best_weights=True,
-            patience=10,
+            patience=args.early_stopping_epochs,
         ),
         tf.keras.callbacks.ModelCheckpoint(
             os.path.join(model_dir, 'weights.{epoch:02d}-{val_loss:.2f}.hdf5'),
@@ -231,5 +243,6 @@ if __name__ == '__main__':
             ]/args.batch_size/args.num_gpus)),
         validation_data=val_dataset,
         validation_steps=dataset_meta.splits_to_sizes[args.val_split_name],
+        validation_freq=1,
         callbacks=callbacks,
     )

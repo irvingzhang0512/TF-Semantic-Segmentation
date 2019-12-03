@@ -1,6 +1,6 @@
 import collections
 import tensorflow as tf
-from ..backends import xception_deeplab
+from ..backends import xception_deeplab, resnet50
 
 BackendDescriptor = collections.namedtuple(
     'DatasetDescriptor',
@@ -36,26 +36,50 @@ def _preprocess_torch(inputs, dtype=tf.float32):
     return inputs
 
 
+def _preporcess_zero_to_one(inputs, dtype=tf.float32):
+    return tf.cast(tf.cast(inputs, tf.float32)/255., tf.float32)
+
+
 XCEPTION = 'xception'
 _XCEPTION_INFORMATION = BackendDescriptor(
+    input_size=(299, 299, 3),
+    downsample_stride=32,
+    preprocess_fn=_preporcess_zero_to_one,
+)
+
+
+RESNET50 = 'resnet50'
+_RESNET50_INFORMATION = BackendDescriptor(
     input_size=(224, 224, 3),
     downsample_stride=32,
-    preprocess_fn=_preprocess_tf,
+    preprocess_fn=_preprocess_caffe,
 )
 
 
 BACKEND_INFORMATION = {
     XCEPTION: _XCEPTION_INFORMATION,
+    RESNET50: _RESNET50_INFORMATION,
 }
+
+
+def build_preprocess_fn(backend_type):
+    if backend_type in BACKEND_INFORMATION:
+        return BACKEND_INFORMATION[backend_type].preprocess_fn
+    raise ValueError('unknown backend type {}'.format(backend_type))
 
 
 def build_backend(backend_type,
                   input_shape=(513, 513, 3),
+                  input_tensor=None,
                   OS=16,
                   fine_tune_batch_norm=False,):
-    if backend_type == 'xception':
+    if backend_type == XCEPTION:
         return xception_deeplab.Xception(
             input_shape=input_shape,
             OS=OS,
-        ), BACKEND_INFORMATION[backend_type].preprocess_fn
+        )
+    elif backend_type == RESNET50:
+        return resnet50.ResNet50(
+            input_shape=input_shape,
+        )
     raise ValueError('unknown backend type {}'.format(backend_type))
