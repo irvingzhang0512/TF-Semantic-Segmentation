@@ -6,7 +6,7 @@ from segmentation.builders import model_builder, dataset_builder
 from segmentation.utils import losses_utils, metrics_utils, \
     training_utils
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-tf.keras.backend.set_learning_phase(True)
+# tf.keras.backend.set_learning_phase(True)
 
 
 def parse_args():
@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument('--ckpt', type=str, default=None)
 
     # training
+    parser.add_argument('--training_steps', type=int, default=0)
     parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--initial_epoch', type=int, default=0)
     parser.add_argument('--logs_root_path', type=str, default="./logs",
@@ -28,6 +29,10 @@ def parse_args():
                         help='part of log dir name')
     parser.add_argument('--clean_model_dir', action='store_true',
                         help='Whether to clean up the model dir if present.')
+
+    # optimizer
+    parser.add_argument('--optimizer_type', type=str, default="adam",
+                        help='adam/sgd/rmsprop')
 
     # multi-gpu configs
     parser.add_argument('--num_gpus', type=int, default=1)
@@ -109,7 +114,7 @@ def _get_datasets(args):
     # val dataset
     val_dataset_configs = dataset_builder.build_dataset_configs(
         dataset_dir=args.dataset_dir,
-        batch_size=args.batch_size,
+        batch_size=1,
         crop_size=(args.crop_height, args.crop_width),
         min_resize_value=args.min_resize_value,
         max_resize_value=args.max_resize_value,
@@ -130,16 +135,29 @@ def _get_model_dir_name(args):
         lr = args.base_learning_rate
     return os.path.join(
         args.logs_root_path,
-        'logs-{}-{}_{}-lr_{}_{}-wd{}-{}'.format(
+        'logs-{}-{}_{}-{}-lr_{}_{}-wd{}-{}'.format(
             args.dataset_name,  # dataset
             args.model_type, args.backend_type,  # model
+            args.optimizer_type,  # optimizer
             args.learning_policy, lr,  # learning rate
             args.weight_decay,  # l2 loss
             args.logs_name,))  # others
 
 
-if __name__ == '__main__':
-    args = parse_args()
+def _add_l2(model, weight_decay):
+    def _do_add_l2(layer):
+        if isinstance(layer, tf.keras.layers.Conv2D):
+            layer.kernel_regularizer = tf.keras.regularizers.l2(weight_decay)
+
+    for l in model.layers:
+        if isinstance(l, tf.keras.Model):
+            for ll in l.layers:
+                _do_add_l2(ll)
+        else:
+            _do_add_l2(l)
+
+
+def main(args):
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_devices
 
     if tf.__version__.split('.')[0] == "1":
@@ -202,15 +220,23 @@ if __name__ == '__main__':
         learning_rate_values=args.learning_rate_values,
     )
 
+    # loss_fn = losses_utils.build_cross_entropy_loss_fn(
+    #     num_classes=dataset_meta.num_classes,
+    # )
+    # _add_l2(keras_model, args.weight_decay)
+
+    loss_fn = losses_utils.build_total_loss_fn(
+        num_classes=dataset_meta.num_classes,
+        trainable_variables=keras_model.trainable_variables,
+        weight_decay=args.weight_decay,
+    )
+
     keras_model.compile(
-        optimizer=tf.keras.optimizers.Adam(
-            learning_rate=learning_rate_fn
+        optimizer=training_utils.get_optimizer(
+            args.optimizer_type,
+            learning_rate_fn,
         ),
-        loss=losses_utils.build_total_loss_fn(
-            num_classes=dataset_meta.num_classes,
-            trainable_variables=keras_model.trainable_variables,
-            weight_decay=args.weight_decay,
-        ),
+        loss=loss_fn,
         metrics=[
             metrics_utils.build_accuracy_fn(dataset_meta.num_classes),
             metrics_utils.build_mean_iou_fn(dataset_meta.num_classes)
@@ -232,17 +258,24 @@ if __name__ == '__main__':
         ),
     ]
 
+    if args.training_steps != 0:
+        training_steps = args.training_steps
+    else:
+        training_steps = int(np.ceil(1.0*dataset_meta.splits_to_sizes[
+            args.train_split_name]/args.batch_size/args.num_gpus))
     # training
     keras_model.fit(
         train_dataset,
         epochs=args.epochs,
         initial_epoch=args.initial_epoch,
-        steps_per_epoch=int(np.ceil(
-            1.0*dataset_meta.splits_to_sizes[
-                args.train_split_name
-            ]/args.batch_size/args.num_gpus)),
-        validation_data=val_dataset,
+        # validation_steps=10,
+        steps_per_epoch=training_steps,
         validation_steps=dataset_meta.splits_to_sizes[args.val_split_name],
+        validation_data=val_dataset,
         validation_freq=1,
         callbacks=callbacks,
     )
+
+
+if __name__ == '__main__':
+    main(parse_args())

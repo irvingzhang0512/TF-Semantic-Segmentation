@@ -1,6 +1,6 @@
 import collections
 import tensorflow as tf
-from ..backends import xception_deeplab, resnet50
+from ..backends import xception_deeplab, xception
 
 BackendDescriptor = collections.namedtuple(
     'DatasetDescriptor',
@@ -33,11 +33,11 @@ def _preprocess_torch(inputs, dtype=tf.float32):
     mean_rgb = tf.reshape([0.485, 0.456, 0.406], [1, 1, 1, 3])
     std_rgb = tf.reshape([0.229, 0.224, 0.225], [1, 1, 1, 3])
     inputs = (inputs - mean_rgb) / std_rgb
-    return inputs
+    return tf.cast(inputs, dtype)
 
 
 def _preporcess_zero_to_one(inputs, dtype=tf.float32):
-    return tf.cast(tf.cast(inputs, tf.float32)/255., tf.float32)
+    return tf.cast(tf.cast(inputs, tf.float32)/255., dtype)
 
 
 XCEPTION = 'xception'
@@ -47,18 +47,17 @@ _XCEPTION_INFORMATION = BackendDescriptor(
     preprocess_fn=_preporcess_zero_to_one,
 )
 
-
-RESNET50 = 'resnet50'
-_RESNET50_INFORMATION = BackendDescriptor(
-    input_size=(224, 224, 3),
+XCEPTION_DEEPLAB = 'xception-deeplab'
+_XCEPTION_DEEPLAB_INFORMATION = BackendDescriptor(
+    input_size=(299, 299, 3),
     downsample_stride=32,
-    preprocess_fn=_preprocess_caffe,
+    preprocess_fn=_preprocess_tf,
 )
 
 
 BACKEND_INFORMATION = {
     XCEPTION: _XCEPTION_INFORMATION,
-    RESNET50: _RESNET50_INFORMATION,
+    XCEPTION_DEEPLAB: _XCEPTION_DEEPLAB_INFORMATION,
 }
 
 
@@ -70,16 +69,23 @@ def build_preprocess_fn(backend_type):
 
 def build_backend(backend_type,
                   input_shape=(513, 513, 3),
-                  input_tensor=None,
-                  OS=16,
-                  fine_tune_batch_norm=False,):
+                  **kwargs):
     if backend_type == XCEPTION:
         return xception_deeplab.Xception(
             input_shape=input_shape,
-            OS=OS,
+            OS=kwargs.get('OS'),
+            fine_tune_batch_norm=kwargs.get('fine_tune_batch_norm'),
+        )
+    if backend_type == XCEPTION_DEEPLAB:
+        return xception.Xception(
+            input_shape=input_shape,
+            output_stages=kwargs.get('output_stages'),
+            xception_type=backend_type,
+            dilation=[1, 2],
         )
     elif backend_type == RESNET50:
-        return resnet50.ResNet50(
-            input_shape=input_shape,
-        )
+        return resnet50.ResNet50(input_shape=input_shape)
+    elif backend_type == VGG16:
+        return vgg16.VGG16(input_shape=input_shape)
+
     raise ValueError('unknown backend type {}'.format(backend_type))

@@ -1,0 +1,29 @@
+python ./scripts/keras_train.py --num_gpus 1 \
+                                --gpu_devices 1 \
+                                --batch_size 8 \
+                                --weight_decay 0.00004 \
+                                --epochs 300 \
+                                --initial_epoch 0 \
+                                --dataset_name camvid \
+                                --dataset_dir /hdd02/zhangyiyang/data/CamVid/tfrecords \
+                                --train_split_name train \
+                                --val_split_name val \
+                                --max_resize_value 480 \
+                                --min_resize_value 360 \
+                                --crop_height 480 \
+                                --crop_width 360 \
+                                --min_scale_factor 0.5 \
+                                --max_scale_factor 2.0 \
+                                --scale_factor_step_size 0.25 \
+                                --num_readers 4 \
+                                --learning_policy poly \
+                                --base_learning_rate 1e-4 \
+                                --learning_power 0.9 \
+                                --end_learning_rate 0. \
+                                --training_number_of_steps 150000  \
+                                --model_type deeplab_v3_plus_v2 \
+                                --model_weights imagenet \
+                                --backend_type xception-deeplab \
+                                --output_stride 16 \
+                                --clean_model_dir \
+                                --logs_name default

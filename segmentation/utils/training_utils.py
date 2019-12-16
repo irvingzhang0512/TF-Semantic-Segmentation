@@ -93,9 +93,44 @@ def get_keras_learning_rate_fn(learning_policy,
             power=learning_power,
         )
     elif learning_policy == 'piecewise':
+        print(learning_rate_boundaries, learning_rate_values)
+        print(learning_rate_boundaries, learning_rate_values)
+        print(learning_rate_boundaries, learning_rate_values)
+        print(learning_rate_boundaries, learning_rate_values)
+        print(learning_rate_boundaries, learning_rate_values)
+        print(learning_rate_boundaries, learning_rate_values)
+        print(learning_rate_boundaries, learning_rate_values)
+        print(learning_rate_boundaries, learning_rate_values)
+        print(learning_rate_boundaries, learning_rate_values)
+        print(learning_rate_boundaries, learning_rate_values)
         return tf.keras.optimizers.schedules.PiecewiseConstantDecay(
             boundaries=learning_rate_boundaries,
             values=learning_rate_values,
         )
     else:
         return base_learning_rate
+
+
+def get_optimizer(opt_type, lr, **kwargs):
+    if opt_type == 'adam':
+        return tf.keras.optimizers.Adam(
+            learning_rate=lr,
+            beta_1=0.9,
+            beta_2=0.999,
+            epsilon=1e-7,
+        )
+    elif opt_type == 'sgd':
+        return tf.keras.optimizers.SGD(
+            learning_rate=lr,
+            momentum=0.0,
+            nesterov=False,
+        )
+    elif opt_type == 'rmsprop':
+        return tf.keras.optimizers.RMSprop(
+            learning_rate=lr,
+            rho=0.9,
+            momentum=0.0,
+            epsilon=1e-7,
+            centered=False,
+        )
+    raise ValueError('unknown optimizer type %s' % opt_type)

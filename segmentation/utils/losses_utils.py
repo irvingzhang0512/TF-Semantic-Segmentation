@@ -36,8 +36,12 @@ def build_total_loss_fn(num_classes, trainable_variables, weight_decay):
             logits_by_num_classes, valid_indices, num_partitions=2)[1]
         valid_labels = tf.dynamic_partition(
             labels_flat, valid_indices, num_partitions=2)[1]
-        cross_entropy = tf.compat.v1.losses.sparse_softmax_cross_entropy(
-            logits=valid_logits, labels=valid_labels)
+
+        # cross_entropy = tf.compat.v1.losses.sparse_softmax_cross_entropy(
+        #     logits=valid_logits, labels=valid_labels)
+        cross_entropy = tf.keras.backend.sparse_categorical_crossentropy(
+            output=valid_logits, target=valid_labels, from_logits=True)
+        cross_entropy = tf.keras.backend.mean(cross_entropy)
 
         # l2 loss
         l2_loss = tf.add_n(

@@ -33,6 +33,7 @@ _ADE20K = 'ade20k'
 _CITYSCAPES = 'cityscapes'
 _MAPILLARY_VISTAS = 'mapillary_vistas'
 _PASCAL = 'pascal_voc_seg'
+_CAMVID = 'camvid'
 
 # Max number of entries in the colormap for each dataset.
 _DATASET_MAX_ENTRIES = {
@@ -40,6 +41,7 @@ _DATASET_MAX_ENTRIES = {
     _CITYSCAPES: 256,
     _MAPILLARY_VISTAS: 66,
     _PASCAL: 256,
+    _CAMVID: 256,
 }
 
 
@@ -233,6 +235,46 @@ def create_cityscapes_label_colormap():
     return colormap
 
 
+def create_camvid_label_colormap():
+    colormap = np.zeros((256, 3), dtype=np.uint8)
+    colormap[:32] = np.asarray([
+        [64, 128, 64],
+        [192, 0, 128],
+        [0, 128, 192],
+        [0, 128, 64],
+        [128, 0, 0],
+        [64, 0, 128],
+        [64, 0, 192],
+        [192, 128, 64],
+        [192, 192, 128],
+        [64, 64, 128],
+        [128, 0, 192],
+        [192, 0, 64],
+        [128, 128, 64],
+        [192, 0, 192],
+        [128, 64, 64],
+        [64, 192, 128],
+        [64, 64, 0],
+        [128, 64, 128],
+        [128, 128, 192],
+        [0, 0, 192],
+        [192, 128, 128],
+        [128, 128, 128],
+        [64, 128, 192],
+        [0, 0, 64],
+        [0, 64, 64],
+        [192, 64, 128],
+        [128, 128, 0],
+        [192, 128, 192],
+        [64, 0, 64],
+        [192, 192, 0],
+        [0, 0, 0],
+        [64, 192, 0],
+    ])
+
+    return colormap
+
+
 def create_mapillary_vistas_label_colormap():
     """Creates a label colormap used in Mapillary Vistas segmentation benchmark.
 
@@ -342,6 +384,10 @@ def get_pascal_name():
     return _PASCAL
 
 
+def get_camvid_name():
+    return _CAMVID
+
+
 def bit_get(val, idx):
     """Gets the bit value.
 
@@ -375,6 +421,8 @@ def create_label_colormap(dataset=_PASCAL):
         return create_mapillary_vistas_label_colormap()
     elif dataset == _PASCAL:
         return create_pascal_label_colormap()
+    elif dataset == _CAMVID:
+        return create_camvid_label_colormap()
     else:
         raise ValueError('Unsupported dataset {}.'.format(dataset))
 

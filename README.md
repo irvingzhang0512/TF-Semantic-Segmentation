@@ -1,15 +1,25 @@
 # TF Semantic Segmentation
 
 + [TF Semantic Segmentation](#tf-semantic-segmentation)
-  + [0. Reference](#0-reference)
-  + [1. Targets](#1-targets)
-  + [2. TODO](#2-todo)
+  + [<ol start="0">
+<li>Reference</li>
+</ol>](#ol-start0lireferenceliol)
+  + [<ol>
+<li>Targets</li>
+</ol>](#ollitargetsliol)
+  + [<ol start="2">
+<li>TODO</li>
+</ol>](#ol-start2litodoliol)
     + [2.1. Datasets](#21-datasets)
     + [2.2. Models](#22-models)
     + [2.3. example](#23-example)
     + [2.4. train/eval/predict](#24-trainevalpredict)
-  + [3. Quick Start](#3-quick-start)
-  + [4. Results](#4-results)
+  + [<ol start="3">
+<li>Quick Start</li>
+</ol>](#ol-start3liquick-startliol)
+  + [<ol start="4">
+<li>Results</li>
+</ol>](#ol-start4liresultsliol)
     + [4.1. VOC](#41-voc)
     + [4.2. ADE20k](#42-ade20k)
     + [4.3. Cityscapes](#43-cityscapes)
@@ -36,7 +46,7 @@
 + [x] Pascal VOC Augmentation
 + [x] Cityscaptes
 + [x] ADE20k
-+ [ ] CamVid
++ [X] CamVid
 + More Datasets
 
 ### 2.2. Models
@@ -55,10 +65,12 @@
 + jupyter
   + [x] show dataset.
   + [x] overfit on one sample jupyter.
+  + [x] predict 
 
 ### 2.4. train/eval/predict
 + [ ] multi scale prediction.
 + [x] Continue training.
++ [x] select optimizer.
 
 
 ## 3. Quick Start
@@ -80,9 +92,8 @@
 | deeplab v3+ | xception | OS 8, [0.5:0.25:1.75] eval scales, 82.52% accuracy | 45.65%(val) | original tf repo |
 
 ### 4.3. Cityscapes
-| model          | backend    | params                             | mIOU         | comment          |
-| -------------- | ---------- | ---------------------------------- | ------------ | ---------------- |
-| deeplab v3+    | xception65 | OS 16                              | 78.79%(val)  | original tf repo |
-| deeplab v3+    | xception65 | OS 8, [0.75:0.25:1.75] eval scales | 80.42%(val)  | original tf repo |
-| deeplab v3+    | xception   | OS 16, voc, lr 1e-3, bz 15, 768    | ?(gpu 0,1,2) |                  |
-| deeplab v3+ v2 | resnet50   | imagenet, lr 1e-4, bz 16, 512      | ?(gpu 3)     |                  |
+| model       | backend    | params                             | mIOU        | comment          |
+| ----------- | ---------- | ---------------------------------- | ----------- | ---------------- |
+| deeplab v3+ | xception65 | OS 16                              | 78.79%(val) | original tf repo |
+| deeplab v3+ | xception65 | OS 8, [0.75:0.25:1.75] eval scales | 80.42%(val) | original tf repo |
+| deeplab v3+ | xception   | OS 16, lr 1e-3, bz 15, 768         | ?(gpu 1,2)  |                  |

@@ -1,11 +1,24 @@
 # Dataset Utils
 
 + [Dataset Utils](#dataset-utils)
-  + [0. Preface](#0-preface)
-  + [1. VOC2012](#1-voc2012)
-  + [2. VOC2012 aug](#2-voc2012-aug)
-  + [3. ADE20k](#3-ade20k)
-  + [4. CityScapes](#4-cityscapes)
+  + [<ol start="0">
+<li>Preface</li>
+</ol>](#ol-start0liprefaceliol)
+  + [<ol>
+<li>VOC2012</li>
+</ol>](#ollivoc2012liol)
+  + [<ol start="2">
+<li>VOC2012 aug</li>
+</ol>](#ol-start2livoc2012-augliol)
+  + [<ol start="3">
+<li>ADE20k</li>
+</ol>](#ol-start3liade20kliol)
+  + [<ol start="4">
+<li>CityScapes</li>
+</ol>](#ol-start4licityscapesliol)
+  + [<ol start="5">
+<li>CamVid</li>
+</ol>](#ol-start5licamvidliol)
 
 
 ## 0. Preface
@@ -125,3 +138,7 @@ python scripts/datasets/build_cityscapes_data.py \
     --cityscapes_root /path/to/cityscapes_root \
     --output_dir /path/to/tfrecords
 ```
+
+## 5. CamVid
++ script: `build_camvid_data.py`
++ 
